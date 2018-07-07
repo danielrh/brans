@@ -301,7 +301,7 @@ pub fn main() {
 }
 pub unsafe extern "C" fn main_0() -> c_int {
     let mut opt: c_int = 0;
-    let mut order: c_int = 0i32;
+    let mut order: c_int = 1i32;
     let mut in_buf: [c_uchar; 1299151] = [0; 1299151];
     let mut decode: c_int = 0i32;
     let mut test: c_int = 1i32;
@@ -331,15 +331,18 @@ pub unsafe extern "C" fn main_0() -> c_int {
         let mut bu: *mut blocks = 0 as *mut blocks;
         let mut nb: c_int = 0i32;
         let mut i: c_int = 0;
-        len = 1000000i32 as size_t;
+        len = 10000000i32 as size_t;
         let ref mut fresh80 = (*b.offset(nb as isize)).blk;
         *fresh80 = malloc(len) as *mut c_uchar;
         (*b.offset(nb as isize)).sz = len as uint32_t;
         xlen = len;
+        let mut rnd_state = 1337u32;
         while 0 != xlen {
+            rnd_state = rnd_state.wrapping_add(120720357);
+            rnd_state %= 992687;
             xlen = xlen.wrapping_sub(1);
             *(*b.offset(nb as isize)).blk.offset(xlen as isize) =
-                (xlen & 63i32 as c_ulong) as c_uchar
+                (rnd_state  as c_ulong & 63i32 as c_ulong) as c_uchar
         }
         nb += 1;
         in_sz =
