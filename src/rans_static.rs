@@ -2,7 +2,7 @@ type c_void = u8;
 type c_char = u8;
 type c_uchar = u8;
 type c_schar = u8;
-type c_ulong = u64; // sorry, it's inconsistent
+type c_ulong = u64;
 type c_long = i64;
 type c_ulonglong = u64;
 type c_longlong = i64;
@@ -15,75 +15,22 @@ type c_float = f32;
 extern crate libc;
 extern "C" {
     #[no_mangle]
-    static mut sys_nerr: c_int;
-    #[no_mangle]
-    static sys_errlist: [*const c_char; 0];
-    #[no_mangle]
-    fn strtod(__nptr: *const c_char, __endptr: *mut *mut c_char)
-     -> c_double;
-    #[no_mangle]
-    fn strtol(__nptr: *const c_char, __endptr: *mut *mut c_char,
-              __base: c_int) -> c_long;
-    #[no_mangle]
-    fn strtoll(__nptr: *const c_char, __endptr: *mut *mut c_char,
-               __base: c_int) -> c_longlong;
-    #[no_mangle]
     fn malloc(_: c_ulong) -> *mut c_void;
-    #[no_mangle]
-    fn free(__ptr: *mut c_void) -> ();
-    #[no_mangle]
-    fn exit(_: c_int) -> !;
-    #[no_mangle]
-    static mut __environ: *mut *mut c_char;
-    #[no_mangle]
-    static mut optarg: *mut c_char;
-    #[no_mangle]
-    static mut optind: c_int;
-    #[no_mangle]
-    static mut opterr: c_int;
-    #[no_mangle]
-    static mut optopt: c_int;
     #[no_mangle]
     fn memmove(_: *mut c_void, _: *const c_void, _: c_ulong)
      -> *mut c_void;
     #[no_mangle]
     fn memset(_: *mut c_void, _: c_int, _: c_ulong)
      -> *mut c_void;
-    #[no_mangle]
-    fn memcmp(_: *const c_void, _: *const c_void,
-              _: c_ulong) -> c_int;
-    #[no_mangle]
-    fn __rawmemchr(__s: *const c_void, __c: c_int)
-     -> *mut c_void;
-    #[no_mangle]
-    fn gettimeofday(__tv: *mut timeval, __tz: __timezone_ptr_t)
-     -> c_int;
 }
 pub type uint32_t = c_uint;
 pub type __off_t = c_long;
 pub type Rans64State = uint64_t;
-#[derive ( Copy , Clone )]
-#[repr ( C )]
-pub struct __va_list_tag {
-    pub gp_offset: c_uint,
-    pub fp_offset: c_uint,
-    pub overflow_arg_area: *mut c_void,
-    pub reg_save_area: *mut c_void,
-}
+
 #[derive ( Copy , Clone )]
 #[repr ( C )]
 pub struct ari_decoder {
     pub R: [c_uchar; 4096],
-}
-pub type _IO_lock_t = ();
-pub type __compar_fn_t =
-    Option<unsafe extern "C" fn(_: *const c_void,
-                                _: *const c_void) -> c_int>;
-#[derive ( Copy , Clone )]
-#[repr ( C )]
-pub struct timeval {
-    pub tv_sec: __time_t,
-    pub tv_usec: __suseconds_t,
 }
 #[derive ( Copy , Clone )]
 #[repr ( C )]
@@ -101,17 +48,8 @@ pub struct RansDecSymbol {
     pub start: uint32_t,
     pub freq: uint32_t,
 }
-pub type size_t = c_ulong;
-pub type __suseconds_t = c_long;
-pub type __timezone_ptr_t = *mut timezone;
 pub type RansState = Rans64State;
 pub type __time_t = c_long;
-#[derive ( Copy , Clone )]
-#[repr ( C )]
-pub struct timezone {
-    pub tz_minuteswest: c_int,
-    pub tz_dsttime: c_int,
-}
 pub type Rans64EncSymbol = RansEncSymbol;
 pub type uint64_t = c_ulong;
 pub type uint8_t = c_uchar;
@@ -121,11 +59,11 @@ pub struct blocks {
     pub blk: *mut c_uchar,
     pub sz: uint32_t,
 }
-unsafe extern "C" fn Rans64MulHi(mut a: uint64_t, mut b: uint64_t)
+fn Rans64MulHi(mut a: uint64_t, mut b: uint64_t)
  -> uint64_t {
     return ((a as u128).wrapping_mul(b as u128) >> 64i32) as uint64_t;
 }
-unsafe extern "C" fn Rans64EncInit(mut r: *mut Rans64State) -> () {
+fn Rans64EncInit(mut r: &mut Rans64State) -> () {
     *r = (1u64 << 31i32) as Rans64State;
 }
 unsafe extern "C" fn Rans64EncPut(mut r: *mut Rans64State,
@@ -547,10 +485,10 @@ pub unsafe extern "C" fn rans_compress_O0(mut in_0: *mut c_uchar,
         tab_size =
             out_buf.offset_to(cp).expect("bad offset_to") as c_long as
                 c_int;
-        Rans64EncInit(&mut rans0 as *mut RansState);
-        Rans64EncInit(&mut rans1 as *mut RansState);
-        Rans64EncInit(&mut rans2 as *mut RansState);
-        Rans64EncInit(&mut rans3 as *mut RansState);
+        Rans64EncInit(&mut rans0);
+        Rans64EncInit(&mut rans1);
+        Rans64EncInit(&mut rans2);
+        Rans64EncInit(&mut rans3);
         i = (in_size & 3i32 as c_uint) as c_int;
         match i {
             3 => {
@@ -1274,76 +1212,8 @@ pub unsafe extern "C" fn rans_compress_O1(mut in_0: *mut c_uchar,
                                isize).offset((257i32 * 257i32 * 3i32) as
                                                  isize).offset(4isize);
         cp = out_buf.offset(4isize);
-        let mut F: [[c_int; 256]; 256] =
-            [[0i32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-              0, 0, 0, 0, 0], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256], [0; 256],
-             [0; 256], [0; 256], [0; 256], [0; 256], [0; 256]];
-        let mut T: [c_int; 264] =
-            [0i32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-             0];
+        let mut F: [[c_int; 256]; 256] = [[0;256];256];
+        let mut T: [c_int; 264] = [0;264];
         let mut i: c_int = 0;
         let mut j: c_int = 0;
         hist1_4(in_0, in_size, F.as_mut_ptr(), T.as_mut_ptr());
@@ -1484,10 +1354,10 @@ pub unsafe extern "C" fn rans_compress_O1(mut in_0: *mut c_uchar,
         let mut rans1: RansState = 0;
         let mut rans2: RansState = 0;
         let mut rans3: RansState = 0;
-        Rans64EncInit(&mut rans0 as *mut RansState);
-        Rans64EncInit(&mut rans1 as *mut RansState);
-        Rans64EncInit(&mut rans2 as *mut RansState);
-        Rans64EncInit(&mut rans3 as *mut RansState);
+        Rans64EncInit(&mut rans0);
+        Rans64EncInit(&mut rans1);
+        Rans64EncInit(&mut rans2);
+        Rans64EncInit(&mut rans3);
         let mut ptr: *mut uint8_t = out_end;
         let mut isz4: c_int = (in_size >> 2i32) as c_int;
         let mut i0: c_int = 1i32 * isz4 - 2i32;
