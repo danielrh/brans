@@ -4,8 +4,6 @@ type c_uchar = u8;
 type c_schar = u8;
 type c_ulong = u64;
 type c_long = i64;
-type c_ulonglong = u64;
-type c_longlong = i64;
 type c_ushort = u16;
 type c_short = i16;
 type c_uint = u32;
@@ -49,7 +47,6 @@ pub struct RansDecSymbol {
     pub freq: uint32_t,
 }
 pub type RansState = Rans64State;
-pub type __time_t = c_long;
 pub type Rans64EncSymbol = RansEncSymbol;
 pub type uint64_t = c_ulong;
 pub type uint8_t = c_uchar;
@@ -73,7 +70,7 @@ unsafe extern "C" fn Rans64EncPut(mut r: *mut Rans64State,
     let mut x: uint64_t = *r;
     let mut x_max: uint64_t =
         (1u64 << 31i32 >> scale_bits <<
-             32i32).wrapping_mul(freq as c_ulonglong) as uint64_t;
+             32i32).wrapping_mul(freq as u64) as uint64_t;
     if x >= x_max {
         *pptr = (*pptr).offset(-1isize);
         **pptr = x as uint32_t;
@@ -86,14 +83,14 @@ unsafe extern "C" fn Rans64EncPut(mut r: *mut Rans64State,
                                                                                           as
                                                                                           c_ulong);
 }
-unsafe extern "C" fn Rans64EncFlush(mut r: *mut Rans64State,
+unsafe extern "C" fn Rans64EncFlush(mut r: &mut Rans64State,
                                     mut pptr: *mut *mut uint32_t) -> () {
     let mut x: uint64_t = *r;
     *pptr = (*pptr).offset(-2isize);
     *(*pptr).offset(0isize) = (x >> 0i32) as uint32_t;
     *(*pptr).offset(1isize) = (x >> 32i32) as uint32_t;
 }
-unsafe extern "C" fn Rans64DecInit(mut r: *mut Rans64State,
+unsafe extern "C" fn Rans64DecInit(mut r: &mut Rans64State,
                                    mut pptr: *mut *mut uint32_t) -> () {
     let mut x: uint64_t = 0;
     x = (*(*pptr).offset(0isize) as uint64_t) << 0i32;
@@ -101,18 +98,18 @@ unsafe extern "C" fn Rans64DecInit(mut r: *mut Rans64State,
     *pptr = (*pptr).offset(2isize);
     *r = x;
 }
-unsafe extern "C" fn Rans64DecGet(mut r: *mut Rans64State,
+fn Rans64DecGet(mut r: &mut Rans64State,
                                   mut scale_bits: uint32_t) -> uint32_t {
     return (*r &
                 (1u32 << scale_bits).wrapping_sub(1i32 as c_uint) as
                     c_ulong) as uint32_t;
 }
-unsafe extern "C" fn Rans64DecAdvance(mut r: *mut Rans64State,
+unsafe extern "C" fn Rans64DecAdvance(mut r: &mut Rans64State,
                                       mut pptr: *mut *mut uint32_t,
                                       mut start: uint32_t, mut freq: uint32_t,
                                       mut scale_bits: uint32_t) -> () {
     let mut mask: uint64_t =
-        (1u64 << scale_bits).wrapping_sub(1i32 as c_ulonglong) as
+        (1u64 << scale_bits).wrapping_sub(1i32 as u64) as
             uint64_t;
     let mut x: uint64_t = *r;
     x =
@@ -122,13 +119,13 @@ unsafe extern "C" fn Rans64DecAdvance(mut r: *mut Rans64State,
                                                                           mask).wrapping_sub(start
                                                                                                  as
                                                                                                  c_ulong);
-    if (x as c_ulonglong) < 1u64 << 31i32 {
+    if (x as u64) < 1u64 << 31i32 {
         x = x << 32i32 | **pptr as c_ulong;
         *pptr = (*pptr).offset(1isize)
     }
     *r = x;
 }
-unsafe extern "C" fn Rans64EncSymbolInit(mut s: *mut Rans64EncSymbol,
+fn Rans64EncSymbolInit(mut s: &mut Rans64EncSymbol,
                                          mut start: uint32_t,
                                          mut freq: uint32_t,
                                          mut scale_bits: uint32_t) -> () {
@@ -164,20 +161,20 @@ unsafe extern "C" fn Rans64EncSymbolInit(mut s: *mut Rans64EncSymbol,
         (*s).bias = start
     };
 }
-unsafe extern "C" fn Rans64DecSymbolInit(mut s: *mut Rans64DecSymbol,
+fn Rans64DecSymbolInit(mut s: &mut Rans64DecSymbol,
                                          mut start: uint32_t,
                                          mut freq: uint32_t) -> () {
     (*s).start = start;
     (*s).freq = freq;
 }
-unsafe extern "C" fn Rans64EncPutSymbol(mut r: *mut Rans64State,
+unsafe extern "C" fn Rans64EncPutSymbol(mut r: &mut Rans64State,
                                         mut pptr: *mut *mut uint32_t,
                                         mut sym: *const Rans64EncSymbol,
                                         mut scale_bits: uint32_t) -> () {
     let mut x: uint64_t = *r;
     let mut x_max: uint64_t =
         (1u64 << 31i32 >> scale_bits <<
-             32i32).wrapping_mul((*sym).freq as c_ulonglong) as
+             32i32).wrapping_mul((*sym).freq as u64) as
             uint64_t;
     if x >= x_max {
         *pptr = (*pptr).offset(-1isize);
@@ -191,13 +188,13 @@ unsafe extern "C" fn Rans64EncPutSymbol(mut r: *mut Rans64State,
                                                                           as
                                                                           c_ulong));
 }
-unsafe extern "C" fn Rans64DecAdvanceSymbol(mut r: *mut Rans64State,
+unsafe extern "C" fn Rans64DecAdvanceSymbol(mut r: &mut Rans64State,
                                             mut pptr: *mut *mut uint32_t,
                                             mut sym: *const Rans64DecSymbol,
                                             mut scale_bits: uint32_t) -> () {
     Rans64DecAdvance(r, pptr, (*sym).start, (*sym).freq, scale_bits);
 }
-unsafe extern "C" fn Rans64DecAdvanceStep(mut r: *mut Rans64State,
+fn Rans64DecAdvanceStep(mut r: &mut Rans64State,
                                           mut start: uint32_t,
                                           mut freq: uint32_t,
                                           mut scale_bits: uint32_t) -> () {
@@ -212,17 +209,17 @@ unsafe extern "C" fn Rans64DecAdvanceStep(mut r: *mut Rans64State,
                                                                                                  as
                                                                                                  c_ulong);
 }
-unsafe extern "C" fn Rans64DecAdvanceSymbolStep(mut r: *mut Rans64State,
+fn Rans64DecAdvanceSymbolStep(mut r: &mut Rans64State,
                                                 mut sym:
-                                                    *const Rans64DecSymbol,
+                                                    &Rans64DecSymbol,
                                                 mut scale_bits: uint32_t)
  -> () {
     Rans64DecAdvanceStep(r, (*sym).start, (*sym).freq, scale_bits);
 }
-unsafe extern "C" fn Rans64DecRenorm(mut r: *mut Rans64State,
+unsafe extern "C" fn Rans64DecRenorm(mut r: &mut Rans64State,
                                      mut pptr: *mut *mut uint32_t) -> () {
     let mut x: uint64_t = *r;
-    if (x as c_ulonglong) < 1u64 << 31i32 {
+    if (x as u64) < 1u64 << 31i32 {
         x = x << 32i32 | **pptr as c_ulong;
         *pptr = (*pptr).offset(1isize)
     }
@@ -232,97 +229,13 @@ unsafe extern "C" fn Rans64DecRenorm(mut r: *mut Rans64State,
 unsafe extern "C" fn hist8(mut in_0: *mut c_uchar,
                            mut in_size: c_uint,
                            mut F0: *mut c_int) -> () {
-    let mut F1: [c_int; 264] =
-        [0i32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    let mut F2: [c_int; 264] =
-        [0i32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    let mut F3: [c_int; 264] =
-        [0i32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    let mut F4: [c_int; 264] =
-        [0i32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    let mut F5: [c_int; 264] =
-        [0i32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    let mut F6: [c_int; 264] =
-        [0i32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    let mut F7: [c_int; 264] =
-        [0i32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    let mut F1: [c_int; 264] = [0;264];
+    let mut F2: [c_int; 264] = [0;264];
+    let mut F3: [c_int; 264] = [0;264];
+    let mut F4: [c_int; 264] = [0;264];
+    let mut F5: [c_int; 264] = [0;264];
+    let mut F6: [c_int; 264] = [0;264];
+    let mut F7: [c_int; 264] = [0;264];
     let mut i: c_int = 0;
     let mut i8: c_int =
         (in_size & !8i32 as c_uint) as c_int;
@@ -380,19 +293,7 @@ pub unsafe extern "C" fn rans_compress_O0(mut in_0: *mut c_uchar,
     let mut rans2: RansState = 0;
     let mut rans3: RansState = 0;
     let mut ptr: *mut uint8_t = 0 as *mut uint8_t;
-    let mut F: [c_int; 264] =
-        [0i32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    let mut F: [c_int; 264] = [0;264];
     let mut i: c_int = 0;
     let mut j: c_int = 0;
     let mut tab_size: c_int = 0;
@@ -471,8 +372,8 @@ pub unsafe extern "C" fn rans_compress_O0(mut in_0: *mut c_uchar,
                     cp = cp.offset(1);
                     *fresh17 = (F[j as usize] & 255i32) as c_uchar
                 }
-                Rans64EncSymbolInit(&mut syms[j as usize] as
-                                        *mut RansEncSymbol, x as uint32_t,
+                Rans64EncSymbolInit(&mut syms[j as usize]
+                                      , x as uint32_t,
                                     F[j as usize] as uint32_t,
                                     12i32 as uint32_t);
                 x += F[j as usize]
@@ -492,7 +393,7 @@ pub unsafe extern "C" fn rans_compress_O0(mut in_0: *mut c_uchar,
         i = (in_size & 3i32 as c_uint) as c_int;
         match i {
             3 => {
-                Rans64EncPutSymbol(&mut rans2 as *mut RansState,
+                Rans64EncPutSymbol(&mut rans2,
                                    &mut ptr as *mut *mut uint8_t as
                                        *mut *mut uint32_t,
                                    &mut syms[*in_0.offset(in_size.wrapping_sub((i
@@ -511,7 +412,7 @@ pub unsafe extern "C" fn rans_compress_O0(mut in_0: *mut c_uchar,
         }
         match current_block {
             14453171571987214953 => {
-                Rans64EncPutSymbol(&mut rans1 as *mut RansState,
+                Rans64EncPutSymbol(&mut rans1,
                                    &mut ptr as *mut *mut uint8_t as
                                        *mut *mut uint32_t,
                                    &mut syms[*in_0.offset(in_size.wrapping_sub((i
@@ -528,7 +429,7 @@ pub unsafe extern "C" fn rans_compress_O0(mut in_0: *mut c_uchar,
         }
         match current_block {
             15409834050583242653 => {
-                Rans64EncPutSymbol(&mut rans0 as *mut RansState,
+                Rans64EncPutSymbol(&mut rans0,
                                    &mut ptr as *mut *mut uint8_t as
                                        *mut *mut uint32_t,
                                    &mut syms[*in_0.offset(in_size.wrapping_sub((i
@@ -556,27 +457,27 @@ pub unsafe extern "C" fn rans_compress_O0(mut in_0: *mut c_uchar,
             let mut s0: *mut RansEncSymbol =
                 &mut syms[*in_0.offset((i - 4i32) as isize) as usize] as
                     *mut RansEncSymbol;
-            Rans64EncPutSymbol(&mut rans3 as *mut RansState,
+            Rans64EncPutSymbol(&mut rans3,
                                &mut ptr as *mut *mut uint8_t as
                                    *mut *mut uint32_t, s3, 12i32 as uint32_t);
-            Rans64EncPutSymbol(&mut rans2 as *mut RansState,
+            Rans64EncPutSymbol(&mut rans2,
                                &mut ptr as *mut *mut uint8_t as
                                    *mut *mut uint32_t, s2, 12i32 as uint32_t);
-            Rans64EncPutSymbol(&mut rans1 as *mut RansState,
+            Rans64EncPutSymbol(&mut rans1,
                                &mut ptr as *mut *mut uint8_t as
                                    *mut *mut uint32_t, s1, 12i32 as uint32_t);
-            Rans64EncPutSymbol(&mut rans0 as *mut RansState,
+            Rans64EncPutSymbol(&mut rans0,
                                &mut ptr as *mut *mut uint8_t as
                                    *mut *mut uint32_t, s0, 12i32 as uint32_t);
             i -= 4i32
         }
-        Rans64EncFlush(&mut rans3 as *mut RansState,
+        Rans64EncFlush(&mut rans3,
                        &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
-        Rans64EncFlush(&mut rans2 as *mut RansState,
+        Rans64EncFlush(&mut rans2,
                        &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
-        Rans64EncFlush(&mut rans1 as *mut RansState,
+        Rans64EncFlush(&mut rans1,
                        &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
-        Rans64EncFlush(&mut rans0 as *mut RansState,
+        Rans64EncFlush(&mut rans0,
                        &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
         *out_size =
             (ptr.offset_to(out_end).expect("bad offset_to") as c_long +
@@ -648,7 +549,7 @@ pub unsafe extern "C" fn rans_uncompress_O0(mut in_0: *mut c_uchar,
                 F = (F & 127i32) << 8i32 | *fresh25 as c_int
             }
             C = x;
-            Rans64DecSymbolInit(&mut syms[j as usize] as *mut RansDecSymbol,
+            Rans64DecSymbolInit(&mut syms[j as usize],
                                 C as uint32_t, F as uint32_t);
             memset(&mut D.R[x as usize] as *mut c_uchar as
                        *mut c_void, j, F as c_ulong);
@@ -675,13 +576,13 @@ pub unsafe extern "C" fn rans_uncompress_O0(mut in_0: *mut c_uchar,
         let mut rans2: RansState = 0;
         let mut rans3: RansState = 0;
         let mut ptr: *mut uint8_t = cp;
-        Rans64DecInit(&mut rans0 as *mut RansState,
+        Rans64DecInit(&mut rans0,
                       &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
-        Rans64DecInit(&mut rans1 as *mut RansState,
+        Rans64DecInit(&mut rans1,
                       &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
-        Rans64DecInit(&mut rans2 as *mut RansState,
+        Rans64DecInit(&mut rans2,
                       &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
-        Rans64DecInit(&mut rans3 as *mut RansState,
+        Rans64DecInit(&mut rans3,
                       &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
         let mut out_end: c_int = out_sz & !3i32;
         let mut R: [RansState; 4] = [0; 4];
@@ -747,16 +648,16 @@ pub unsafe extern "C" fn rans_uncompress_O0(mut in_0: *mut c_uchar,
                                                                                  usize].start)
                                                      as c_ulong) as
                     RansState as RansState;
-            Rans64DecRenorm(&mut R[0usize] as *mut RansState,
+            Rans64DecRenorm(&mut R[0usize],
                             &mut ptr as *mut *mut uint8_t as
                                 *mut *mut uint32_t);
-            Rans64DecRenorm(&mut R[1usize] as *mut RansState,
+            Rans64DecRenorm(&mut R[1usize],
                             &mut ptr as *mut *mut uint8_t as
                                 *mut *mut uint32_t);
-            Rans64DecRenorm(&mut R[2usize] as *mut RansState,
+            Rans64DecRenorm(&mut R[2usize],
                             &mut ptr as *mut *mut uint8_t as
                                 *mut *mut uint32_t);
-            Rans64DecRenorm(&mut R[3usize] as *mut RansState,
+            Rans64DecRenorm(&mut R[3usize],
                             &mut ptr as *mut *mut uint8_t as
                                 *mut *mut uint32_t);
             i += 4i32
@@ -768,9 +669,9 @@ pub unsafe extern "C" fn rans_uncompress_O0(mut in_0: *mut c_uchar,
         match out_sz & 3i32 {
             1 => {
                 c_0 =
-                    D.R[Rans64DecGet(&mut rans0 as *mut RansState,
+                    D.R[Rans64DecGet(&mut rans0,
                                      12i32 as uint32_t) as usize];
-                Rans64DecAdvanceSymbol(&mut rans0 as *mut RansState,
+                Rans64DecAdvanceSymbol(&mut rans0,
                                        &mut ptr as *mut *mut uint8_t as
                                            *mut *mut uint32_t,
                                        &mut syms[c_0 as usize] as
@@ -780,9 +681,9 @@ pub unsafe extern "C" fn rans_uncompress_O0(mut in_0: *mut c_uchar,
             }
             2 => {
                 c_0 =
-                    D.R[Rans64DecGet(&mut rans0 as *mut RansState,
+                    D.R[Rans64DecGet(&mut rans0,
                                      12i32 as uint32_t) as usize];
-                Rans64DecAdvanceSymbol(&mut rans0 as *mut RansState,
+                Rans64DecAdvanceSymbol(&mut rans0,
                                        &mut ptr as *mut *mut uint8_t as
                                            *mut *mut uint32_t,
                                        &mut syms[c_0 as usize] as
@@ -790,9 +691,9 @@ pub unsafe extern "C" fn rans_uncompress_O0(mut in_0: *mut c_uchar,
                                        12i32 as uint32_t);
                 *out_buf.offset(out_end as isize) = c_0 as c_char;
                 c_0 =
-                    D.R[Rans64DecGet(&mut rans1 as *mut RansState,
+                    D.R[Rans64DecGet(&mut rans1,
                                      12i32 as uint32_t) as usize];
-                Rans64DecAdvanceSymbol(&mut rans1 as *mut RansState,
+                Rans64DecAdvanceSymbol(&mut rans1,
                                        &mut ptr as *mut *mut uint8_t as
                                            *mut *mut uint32_t,
                                        &mut syms[c_0 as usize] as
@@ -803,9 +704,9 @@ pub unsafe extern "C" fn rans_uncompress_O0(mut in_0: *mut c_uchar,
             }
             3 => {
                 c_0 =
-                    D.R[Rans64DecGet(&mut rans0 as *mut RansState,
+                    D.R[Rans64DecGet(&mut rans0,
                                      12i32 as uint32_t) as usize];
-                Rans64DecAdvanceSymbol(&mut rans0 as *mut RansState,
+                Rans64DecAdvanceSymbol(&mut rans0,
                                        &mut ptr as *mut *mut uint8_t as
                                            *mut *mut uint32_t,
                                        &mut syms[c_0 as usize] as
@@ -813,9 +714,9 @@ pub unsafe extern "C" fn rans_uncompress_O0(mut in_0: *mut c_uchar,
                                        12i32 as uint32_t);
                 *out_buf.offset(out_end as isize) = c_0 as c_char;
                 c_0 =
-                    D.R[Rans64DecGet(&mut rans1 as *mut RansState,
+                    D.R[Rans64DecGet(&mut rans1,
                                      12i32 as uint32_t) as usize];
-                Rans64DecAdvanceSymbol(&mut rans1 as *mut RansState,
+                Rans64DecAdvanceSymbol(&mut rans1,
                                        &mut ptr as *mut *mut uint8_t as
                                            *mut *mut uint32_t,
                                        &mut syms[c_0 as usize] as
@@ -824,9 +725,9 @@ pub unsafe extern "C" fn rans_uncompress_O0(mut in_0: *mut c_uchar,
                 *out_buf.offset((out_end + 1i32) as isize) =
                     c_0 as c_char;
                 c_0 =
-                    D.R[Rans64DecGet(&mut rans2 as *mut RansState,
+                    D.R[Rans64DecGet(&mut rans2,
                                      12i32 as uint32_t) as usize];
-                Rans64DecAdvanceSymbol(&mut rans2 as *mut RansState,
+                Rans64DecAdvanceSymbol(&mut rans2,
                                        &mut ptr as *mut *mut uint8_t as
                                            *mut *mut uint32_t,
                                        &mut syms[c_0 as usize] as
@@ -884,7 +785,7 @@ pub unsafe extern "C" fn rans_uncompress_O0b(mut in_0: *mut c_uchar,
                 F = (F & 127i32) << 8i32 | *fresh31 as c_int
             }
             C = x;
-            Rans64DecSymbolInit(&mut syms[j as usize] as *mut RansDecSymbol,
+            Rans64DecSymbolInit(&mut syms[j as usize],
                                 C as uint32_t, F as uint32_t);
             memset(&mut D.R[x as usize] as *mut c_uchar as
                        *mut c_void, j, F as c_ulong);
@@ -911,13 +812,13 @@ pub unsafe extern "C" fn rans_uncompress_O0b(mut in_0: *mut c_uchar,
         let mut rans2: RansState = 0;
         let mut rans3: RansState = 0;
         let mut ptr: *mut uint8_t = cp;
-        Rans64DecInit(&mut rans0 as *mut RansState,
+        Rans64DecInit(&mut rans0,
                       &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
-        Rans64DecInit(&mut rans1 as *mut RansState,
+        Rans64DecInit(&mut rans1,
                       &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
-        Rans64DecInit(&mut rans2 as *mut RansState,
+        Rans64DecInit(&mut rans2,
                       &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
-        Rans64DecInit(&mut rans3 as *mut RansState,
+        Rans64DecInit(&mut rans3,
                       &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
         let mut out_end: c_int = out_sz & !3i32;
         let mut R: [RansState; 4] = [0; 4];
@@ -981,16 +882,16 @@ pub unsafe extern "C" fn rans_uncompress_O0b(mut in_0: *mut c_uchar,
                                                                                  usize].start)
                                                      as c_ulong) as
                     RansState as RansState;
-            Rans64DecRenorm(&mut R[0usize] as *mut RansState,
+            Rans64DecRenorm(&mut R[0usize],
                             &mut ptr as *mut *mut uint8_t as
                                 *mut *mut uint32_t);
-            Rans64DecRenorm(&mut R[1usize] as *mut RansState,
+            Rans64DecRenorm(&mut R[1usize],
                             &mut ptr as *mut *mut uint8_t as
                                 *mut *mut uint32_t);
-            Rans64DecRenorm(&mut R[2usize] as *mut RansState,
+            Rans64DecRenorm(&mut R[2usize],
                             &mut ptr as *mut *mut uint8_t as
                                 *mut *mut uint32_t);
-            Rans64DecRenorm(&mut R[3usize] as *mut RansState,
+            Rans64DecRenorm(&mut R[3usize],
                             &mut ptr as *mut *mut uint8_t as
                                 *mut *mut uint32_t);
             i += 4i32
@@ -1002,9 +903,9 @@ pub unsafe extern "C" fn rans_uncompress_O0b(mut in_0: *mut c_uchar,
         match out_sz & 3i32 {
             1 => {
                 c_0 =
-                    D.R[Rans64DecGet(&mut rans0 as *mut RansState,
+                    D.R[Rans64DecGet(&mut rans0,
                                      12i32 as uint32_t) as usize];
-                Rans64DecAdvanceSymbol(&mut rans0 as *mut RansState,
+                Rans64DecAdvanceSymbol(&mut rans0,
                                        &mut ptr as *mut *mut uint8_t as
                                            *mut *mut uint32_t,
                                        &mut syms[c_0 as usize] as
@@ -1014,9 +915,9 @@ pub unsafe extern "C" fn rans_uncompress_O0b(mut in_0: *mut c_uchar,
             }
             2 => {
                 c_0 =
-                    D.R[Rans64DecGet(&mut rans0 as *mut RansState,
+                    D.R[Rans64DecGet(&mut rans0,
                                      12i32 as uint32_t) as usize];
-                Rans64DecAdvanceSymbol(&mut rans0 as *mut RansState,
+                Rans64DecAdvanceSymbol(&mut rans0,
                                        &mut ptr as *mut *mut uint8_t as
                                            *mut *mut uint32_t,
                                        &mut syms[c_0 as usize] as
@@ -1024,9 +925,9 @@ pub unsafe extern "C" fn rans_uncompress_O0b(mut in_0: *mut c_uchar,
                                        12i32 as uint32_t);
                 *out_buf.offset(out_end as isize) = c_0 as c_char;
                 c_0 =
-                    D.R[Rans64DecGet(&mut rans1 as *mut RansState,
+                    D.R[Rans64DecGet(&mut rans1,
                                      12i32 as uint32_t) as usize];
-                Rans64DecAdvanceSymbol(&mut rans1 as *mut RansState,
+                Rans64DecAdvanceSymbol(&mut rans1,
                                        &mut ptr as *mut *mut uint8_t as
                                            *mut *mut uint32_t,
                                        &mut syms[c_0 as usize] as
@@ -1037,9 +938,9 @@ pub unsafe extern "C" fn rans_uncompress_O0b(mut in_0: *mut c_uchar,
             }
             3 => {
                 c_0 =
-                    D.R[Rans64DecGet(&mut rans0 as *mut RansState,
+                    D.R[Rans64DecGet(&mut rans0,
                                      12i32 as uint32_t) as usize];
-                Rans64DecAdvanceSymbol(&mut rans0 as *mut RansState,
+                Rans64DecAdvanceSymbol(&mut rans0,
                                        &mut ptr as *mut *mut uint8_t as
                                            *mut *mut uint32_t,
                                        &mut syms[c_0 as usize] as
@@ -1047,9 +948,9 @@ pub unsafe extern "C" fn rans_uncompress_O0b(mut in_0: *mut c_uchar,
                                        12i32 as uint32_t);
                 *out_buf.offset(out_end as isize) = c_0 as c_char;
                 c_0 =
-                    D.R[Rans64DecGet(&mut rans1 as *mut RansState,
+                    D.R[Rans64DecGet(&mut rans1,
                                      12i32 as uint32_t) as usize];
-                Rans64DecAdvanceSymbol(&mut rans1 as *mut RansState,
+                Rans64DecAdvanceSymbol(&mut rans1,
                                        &mut ptr as *mut *mut uint8_t as
                                            *mut *mut uint32_t,
                                        &mut syms[c_0 as usize] as
@@ -1058,9 +959,9 @@ pub unsafe extern "C" fn rans_uncompress_O0b(mut in_0: *mut c_uchar,
                 *out_buf.offset((out_end + 1i32) as isize) =
                     c_0 as c_char;
                 c_0 =
-                    D.R[Rans64DecGet(&mut rans2 as *mut RansState,
+                    D.R[Rans64DecGet(&mut rans2,
                                      12i32 as uint32_t) as usize];
-                Rans64DecAdvanceSymbol(&mut rans2 as *mut RansState,
+                Rans64DecAdvanceSymbol(&mut rans2,
                                        &mut ptr as *mut *mut uint8_t as
                                            *mut *mut uint32_t,
                                        &mut syms[c_0 as usize] as
@@ -1079,45 +980,9 @@ unsafe extern "C" fn hist1_4(mut in_0: *mut c_uchar,
                              mut in_size: c_uint,
                              mut F0: *mut [c_int; 256],
                              mut T0: *mut c_int) -> () {
-    let mut T1: [c_int; 264] =
-        [0i32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    let mut T2: [c_int; 264] =
-        [0i32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    let mut T3: [c_int; 264] =
-        [0i32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    let mut T1: [c_int; 264] = [0;264];
+    let mut T2: [c_int; 264] = [0;264];
+    let mut T3: [c_int; 264] = [0;264];
     let mut idiv4: c_uint = in_size.wrapping_div(4i32 as c_uint);
     let mut i: c_int = 0;
     let mut c0: c_uchar = 0;
@@ -1329,7 +1194,7 @@ pub unsafe extern "C" fn rans_compress_O1(mut in_0: *mut c_uchar,
                                     c_uchar
                         }
                         Rans64EncSymbolInit(&mut syms[i as usize][j as usize]
-                                                as *mut RansEncSymbol, x,
+                                            , x,
                                             *F_i_.offset(j as isize) as
                                                 uint32_t, 12i32 as uint32_t);
                         x =
@@ -1373,7 +1238,7 @@ pub unsafe extern "C" fn rans_compress_O1(mut in_0: *mut c_uchar,
         i3 = in_size.wrapping_sub(2i32 as c_uint) as c_int;
         while i3 > 4i32 * isz4 - 2i32 {
             let mut c3: c_uchar = *in_0.offset(i3 as isize);
-            Rans64EncPutSymbol(&mut rans3 as *mut RansState,
+            Rans64EncPutSymbol(&mut rans3,
                                &mut ptr as *mut *mut uint8_t as
                                    *mut *mut uint32_t,
                                &mut syms[c3 as usize][l3 as usize] as
@@ -1398,16 +1263,16 @@ pub unsafe extern "C" fn rans_compress_O1(mut in_0: *mut c_uchar,
             c0 = *in_0.offset(i0 as isize);
             let mut s0: *mut RansEncSymbol =
                 &mut syms[c0 as usize][l0 as usize] as *mut RansEncSymbol;
-            Rans64EncPutSymbol(&mut rans3 as *mut RansState,
+            Rans64EncPutSymbol(&mut rans3,
                                &mut ptr as *mut *mut uint8_t as
                                    *mut *mut uint32_t, s3, 12i32 as uint32_t);
-            Rans64EncPutSymbol(&mut rans2 as *mut RansState,
+            Rans64EncPutSymbol(&mut rans2,
                                &mut ptr as *mut *mut uint8_t as
                                    *mut *mut uint32_t, s2, 12i32 as uint32_t);
-            Rans64EncPutSymbol(&mut rans1 as *mut RansState,
+            Rans64EncPutSymbol(&mut rans1,
                                &mut ptr as *mut *mut uint8_t as
                                    *mut *mut uint32_t, s1, 12i32 as uint32_t);
-            Rans64EncPutSymbol(&mut rans0 as *mut RansState,
+            Rans64EncPutSymbol(&mut rans0,
                                &mut ptr as *mut *mut uint8_t as
                                    *mut *mut uint32_t, s0, 12i32 as uint32_t);
             l0 = c0;
@@ -1419,33 +1284,33 @@ pub unsafe extern "C" fn rans_compress_O1(mut in_0: *mut c_uchar,
             i2 -= 1;
             i3 -= 1
         }
-        Rans64EncPutSymbol(&mut rans3 as *mut RansState,
+        Rans64EncPutSymbol(&mut rans3,
                            &mut ptr as *mut *mut uint8_t as
                                *mut *mut uint32_t,
                            &mut syms[0usize][l3 as usize] as
                                *mut RansEncSymbol, 12i32 as uint32_t);
-        Rans64EncPutSymbol(&mut rans2 as *mut RansState,
+        Rans64EncPutSymbol(&mut rans2,
                            &mut ptr as *mut *mut uint8_t as
                                *mut *mut uint32_t,
                            &mut syms[0usize][l2 as usize] as
                                *mut RansEncSymbol, 12i32 as uint32_t);
-        Rans64EncPutSymbol(&mut rans1 as *mut RansState,
+        Rans64EncPutSymbol(&mut rans1,
                            &mut ptr as *mut *mut uint8_t as
                                *mut *mut uint32_t,
                            &mut syms[0usize][l1 as usize] as
                                *mut RansEncSymbol, 12i32 as uint32_t);
-        Rans64EncPutSymbol(&mut rans0 as *mut RansState,
+        Rans64EncPutSymbol(&mut rans0,
                            &mut ptr as *mut *mut uint8_t as
                                *mut *mut uint32_t,
                            &mut syms[0usize][l0 as usize] as
                                *mut RansEncSymbol, 12i32 as uint32_t);
-        Rans64EncFlush(&mut rans3 as *mut RansState,
+        Rans64EncFlush(&mut rans3,
                        &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
-        Rans64EncFlush(&mut rans2 as *mut RansState,
+        Rans64EncFlush(&mut rans2,
                        &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
-        Rans64EncFlush(&mut rans1 as *mut RansState,
+        Rans64EncFlush(&mut rans1,
                        &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
-        Rans64EncFlush(&mut rans0 as *mut RansState,
+        Rans64EncFlush(&mut rans0,
                        &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
         *out_size =
             (ptr.offset_to(out_end).expect("bad offset_to") as c_long +
@@ -1523,8 +1388,8 @@ pub unsafe extern "C" fn rans_uncompress_O1(mut in_0: *mut c_uchar,
                 }
                 C = x;
                 if 0 == F { F = 1i32 << 12i32 }
-                Rans64DecSymbolInit(&mut syms[i as usize][j as usize] as
-                                        *mut RansDecSymbol, C as uint32_t,
+                Rans64DecSymbolInit(&mut syms[i as usize][j as usize]
+                                        , C as uint32_t,
                                     F as uint32_t);
                 memset(&mut D[i as usize].R[x as usize] as *mut c_uchar
                            as *mut c_void, j, F as c_ulong);
@@ -1568,13 +1433,13 @@ pub unsafe extern "C" fn rans_uncompress_O1(mut in_0: *mut c_uchar,
         let mut rans2: RansState = 0;
         let mut rans3: RansState = 0;
         let mut ptr: *mut uint8_t = cp;
-        Rans64DecInit(&mut rans0 as *mut RansState,
+        Rans64DecInit(&mut rans0,
                       &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
-        Rans64DecInit(&mut rans1 as *mut RansState,
+        Rans64DecInit(&mut rans1,
                       &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
-        Rans64DecInit(&mut rans2 as *mut RansState,
+        Rans64DecInit(&mut rans2,
                       &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
-        Rans64DecInit(&mut rans3 as *mut RansState,
+        Rans64DecInit(&mut rans3,
                       &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
         let mut isz4: c_int = out_sz >> 2i32;
         let mut l0: c_int = 0i32;
@@ -1659,16 +1524,16 @@ pub unsafe extern "C" fn rans_uncompress_O1(mut in_0: *mut c_uchar,
                                                                                             usize].start)
                                                      as c_ulong) as
                     RansState as RansState;
-            Rans64DecRenorm(&mut R[0usize] as *mut RansState,
+            Rans64DecRenorm(&mut R[0usize],
                             &mut ptr as *mut *mut uint8_t as
                                 *mut *mut uint32_t);
-            Rans64DecRenorm(&mut R[1usize] as *mut RansState,
+            Rans64DecRenorm(&mut R[1usize],
                             &mut ptr as *mut *mut uint8_t as
                                 *mut *mut uint32_t);
-            Rans64DecRenorm(&mut R[2usize] as *mut RansState,
+            Rans64DecRenorm(&mut R[2usize],
                             &mut ptr as *mut *mut uint8_t as
                                 *mut *mut uint32_t);
-            Rans64DecRenorm(&mut R[3usize] as *mut RansState,
+            Rans64DecRenorm(&mut R[3usize],
                             &mut ptr as *mut *mut uint8_t as
                                 *mut *mut uint32_t);
             l0 = c[0usize] as c_int;
@@ -1687,10 +1552,10 @@ pub unsafe extern "C" fn rans_uncompress_O1(mut in_0: *mut c_uchar,
         while i4[3usize] < out_sz {
             let mut c3: c_uchar =
                 D[l3 as
-                      usize].R[Rans64DecGet(&mut rans3 as *mut RansState,
+                      usize].R[Rans64DecGet(&mut rans3,
                                             12i32 as uint32_t) as usize];
             *out_buf.offset(i4[3usize] as isize) = c3 as c_char;
-            Rans64DecAdvanceSymbol(&mut rans3 as *mut RansState,
+            Rans64DecAdvanceSymbol(&mut rans3,
                                    &mut ptr as *mut *mut uint8_t as
                                        *mut *mut uint32_t,
                                    &mut syms[l3 as usize][c3 as usize] as
@@ -1751,8 +1616,8 @@ pub unsafe extern "C" fn rans_uncompress_O1b(mut in_0: *mut c_uchar,
                 }
                 C = x;
                 if 0 == F { F = 1i32 << 12i32 }
-                Rans64DecSymbolInit(&mut syms[i as usize][j as usize] as
-                                        *mut RansDecSymbol, C as uint32_t,
+                Rans64DecSymbolInit(&mut syms[i as usize][j as usize]
+                                        , C as uint32_t,
                                     F as uint32_t);
                 memset(&mut D[i as usize].R[x as usize] as *mut c_uchar
                            as *mut c_void, j, F as c_ulong);
@@ -1796,13 +1661,13 @@ pub unsafe extern "C" fn rans_uncompress_O1b(mut in_0: *mut c_uchar,
         let mut rans2: RansState = 0;
         let mut rans3: RansState = 0;
         let mut ptr: *mut uint8_t = cp;
-        Rans64DecInit(&mut rans0 as *mut RansState,
+        Rans64DecInit(&mut rans0,
                       &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
-        Rans64DecInit(&mut rans1 as *mut RansState,
+        Rans64DecInit(&mut rans1,
                       &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
-        Rans64DecInit(&mut rans2 as *mut RansState,
+        Rans64DecInit(&mut rans2,
                       &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
-        Rans64DecInit(&mut rans3 as *mut RansState,
+        Rans64DecInit(&mut rans3,
                       &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
         let mut isz4: c_int = out_sz >> 2i32;
         let mut l0: c_int = 0i32;
@@ -1887,16 +1752,16 @@ pub unsafe extern "C" fn rans_uncompress_O1b(mut in_0: *mut c_uchar,
                                                                                             usize].start)
                                                      as c_ulong) as
                     RansState as RansState;
-            Rans64DecRenorm(&mut R[0usize] as *mut RansState,
+            Rans64DecRenorm(&mut R[0usize],
                             &mut ptr as *mut *mut uint8_t as
                                 *mut *mut uint32_t);
-            Rans64DecRenorm(&mut R[1usize] as *mut RansState,
+            Rans64DecRenorm(&mut R[1usize],
                             &mut ptr as *mut *mut uint8_t as
                                 *mut *mut uint32_t);
-            Rans64DecRenorm(&mut R[2usize] as *mut RansState,
+            Rans64DecRenorm(&mut R[2usize],
                             &mut ptr as *mut *mut uint8_t as
                                 *mut *mut uint32_t);
-            Rans64DecRenorm(&mut R[3usize] as *mut RansState,
+            Rans64DecRenorm(&mut R[3usize],
                             &mut ptr as *mut *mut uint8_t as
                                 *mut *mut uint32_t);
             l0 = c[0usize] as c_int;
@@ -1915,10 +1780,10 @@ pub unsafe extern "C" fn rans_uncompress_O1b(mut in_0: *mut c_uchar,
         while i4[3usize] < out_sz {
             let mut c3: c_uchar =
                 D[l3 as
-                      usize].R[Rans64DecGet(&mut rans3 as *mut RansState,
+                      usize].R[Rans64DecGet(&mut rans3,
                                             12i32 as uint32_t) as usize];
             *out_buf.offset(i4[3usize] as isize) = c3 as c_char;
-            Rans64DecAdvanceSymbol(&mut rans3 as *mut RansState,
+            Rans64DecAdvanceSymbol(&mut rans3,
                                    &mut ptr as *mut *mut uint8_t as
                                        *mut *mut uint32_t,
                                    &mut syms[l3 as usize][c3 as usize] as
