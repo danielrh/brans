@@ -1,0 +1,8 @@
+[package]
+name="brans"
+version="0.0.1"
+[lib]
+
+[[bin]]
+name="brans"
+
