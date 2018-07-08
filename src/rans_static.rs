@@ -1519,7 +1519,11 @@ fn safe_rans_uncompress_O1(in_0: &[c_uchar],
     R[1usize] = rans1;
     R[2usize] = rans2;
     R[3usize] = rans3;
-    while i4[0usize] < isz4 {
+    {
+    let (out_buf0, outrest0) = out_buf.split_at_mut(isz4 as usize);
+    let (out_buf1, outrest1) = outrest0.split_at_mut(isz4 as usize);
+    let (out_buf2, out_buf3) = outrest1.split_at_mut(isz4 as usize);
+    for (out0, (out1, (out2, out3))) in out_buf0.iter_mut().zip(out_buf1.iter_mut().zip(out_buf2.iter_mut().zip(out_buf3.iter_mut()))) {
         let mut m: [uint32_t; 4] =
             [(R[0usize] &
               (1u32 << 12i32).wrapping_sub(1i32 as c_uint) as
@@ -1538,10 +1542,10 @@ fn safe_rans_uncompress_O1(in_0: &[c_uchar],
              D[l1 as usize].R[m[1usize] as usize],
              D[l2 as usize].R[m[2usize] as usize],
              D[l3 as usize].R[m[3usize] as usize]];
-        out_buf[i4[0usize] as usize] = c[0usize] as c_char;
-        out_buf[i4[1usize] as usize] = c[1usize] as c_char;
-        out_buf[i4[2usize] as usize] = c[2usize] as c_char;
-        out_buf[i4[3usize] as usize] = c[3usize] as c_char;
+        *out0 = c[0usize] as c_char;
+        *out1 = c[1usize] as c_char;
+        *out2 = c[2usize] as c_char;
+        *out3 = c[3usize] as c_char;
         R[0usize] =
             (syms[l0 as usize][c[0usize] as usize].freq as
              c_ulong).wrapping_mul(R[0usize] >> 12i32);
@@ -1606,6 +1610,7 @@ fn safe_rans_uncompress_O1(in_0: &[c_uchar],
         i4[1usize] += 1;
         i4[2usize] += 1;
         i4[3usize] += 1
+    }
     }
     rans0 = R[0usize];
     rans1 = R[1usize];
