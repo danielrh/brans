@@ -136,6 +136,97 @@ fn Rans64DecAdvance(mut r: &mut Rans64State,
     }
     *r = x;
 }
+
+
+
+///////////////u8/////////
+#[no_mangle]
+fn u8Rans64DecInit(mut r: &mut Rans64State,
+                 pptr: &[u8],
+                 ptr_off: &mut u32) -> () {
+    let mut x: uint64_t = 0;
+    x = (pptr[*ptr_off as usize + 7] as u64) << 56;
+    x |= (pptr[*ptr_off as usize + 6] as u64) << 48;
+    x |= (pptr[*ptr_off as usize + 5] as u64) << 40;
+    x |= (pptr[*ptr_off as usize + 4] as u64) << 32;
+    x |= (pptr[*ptr_off as usize + 3] as u64) << 24;
+    x |= (pptr[*ptr_off as usize + 2] as u64) << 16;
+    x |= (pptr[*ptr_off as usize + 1] as u64) << 8;
+    x |= (pptr[*ptr_off as usize] as u64);
+    *ptr_off = ptr_off.wrapping_add(8);
+    *r = x;
+}
+
+#[no_mangle]
+fn u8Rans64DecAdvance(mut r: &mut Rans64State,
+                      pptr: &[u8],
+                      ptr_off: &mut u32,
+                      mut start: uint32_t, mut freq: uint32_t,
+                      mut scale_bits: uint32_t) -> () {
+    let mut mask: uint64_t =
+        (1u64 << scale_bits).wrapping_sub(1i32 as u64) as
+            uint64_t;
+    let mut x: uint64_t = *r;
+    x =
+        (freq as
+             c_ulong).wrapping_mul(x >>
+                                             scale_bits).wrapping_add(x &
+                                                                          mask).wrapping_sub(start
+                                                                                                 as
+                                                                                                 c_ulong);
+    if (x as u64) < 1u64 << 31i32 {
+        x = x << 32i32 | (
+            (pptr[*ptr_off as usize + 3] as u64) << 24) | (
+            (pptr[*ptr_off as usize + 2] as u64) << 16) | (
+            (pptr[*ptr_off as usize + 1] as u64) << 8) | (
+            pptr[*ptr_off as usize] as u64);
+        *ptr_off = ptr_off.wrapping_add(4);
+    }
+    *r = x;
+}
+
+#[no_mangle]
+fn u8Rans64DecAdvanceSymbol(mut r: &mut Rans64State,
+                                            pptr: &[u8],
+                                            ptr_off: &mut u32,
+                                            mut sym: &Rans64DecSymbol,
+                                            mut scale_bits: uint32_t) {
+    u8Rans64DecAdvance(r, pptr, ptr_off, (*sym).start, (*sym).freq, scale_bits);
+}
+
+#[no_mangle]
+fn u8Rans64DecRenorm(mut r: &mut Rans64State,
+                   pptr: &[u8], ptr_offset: &mut u32) {
+    let mut x: uint64_t = *r;
+    if (x as u64) < 1u64 << 31i32 {
+        x = x << 32i32 | (
+            (pptr[*ptr_offset as usize + 3] as u64) << 24) | (
+            (pptr[*ptr_offset as usize + 2] as u64) << 16) | (
+            (pptr[*ptr_offset as usize + 1] as u64) << 8) | (
+            pptr[*ptr_offset as usize] as u64);
+        *ptr_offset = ptr_offset.wrapping_add(4);
+    }
+    *r = x;
+}
+///////////////u8///////////
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #[no_mangle]
 fn Rans64EncSymbolInit(mut s: &mut Rans64EncSymbol,
                                          mut start: uint32_t,
@@ -180,6 +271,7 @@ fn Rans64DecSymbolInit(mut s: &mut Rans64DecSymbol,
     (*s).start = start;
     (*s).freq = freq;
 }
+
 #[no_mangle]
 fn Rans64EncPutSymbol(mut r: &mut Rans64State,
                                         pptr: &mut [uint32_t],
@@ -1496,16 +1588,16 @@ fn safe_rans_uncompress_O1(in_0: &[c_uchar],
     let mut rans2: RansState = 0;
     let mut rans3: RansState = 0;
 
-    let pptr = unsafe{core::slice::from_raw_parts(cp.as_ptr() as *const u32, (in_0.len() - ht_in_offset) >> 2)};
-    let mut ptr_offset = 0usize;
-    Rans64DecInit(&mut rans0,
+    let pptr = cp;
+    let mut ptr_offset = 0u32;
+    u8Rans64DecInit(&mut rans0,
                   pptr, &mut ptr_offset);
     
-    Rans64DecInit(&mut rans1,
+    u8Rans64DecInit(&mut rans1,
                   pptr, &mut ptr_offset);
-    Rans64DecInit(&mut rans2,
+    u8Rans64DecInit(&mut rans2,
                   pptr, &mut ptr_offset);
-    Rans64DecInit(&mut rans3,
+    u8Rans64DecInit(&mut rans3,
                   pptr, &mut ptr_offset);
     let mut isz4: c_int = out_sz >> 2i32;
     let mut l0: c_int = 0i32;
@@ -1594,14 +1686,14 @@ fn safe_rans_uncompress_O1(in_0: &[c_uchar],
                                                                       usize].start)
                                    as c_ulong) as
             RansState as RansState;
-        Rans64DecRenorm(&mut R[0usize],
-                        pptr, &mut ptr_offset);
-        Rans64DecRenorm(&mut R[1usize],
-                        pptr, &mut ptr_offset);
-        Rans64DecRenorm(&mut R[2usize],
-                        pptr, &mut ptr_offset);
-        Rans64DecRenorm(&mut R[3usize],
-                        pptr, &mut ptr_offset);
+        u8Rans64DecRenorm(&mut R[0usize],
+                          pptr, &mut ptr_offset);
+        u8Rans64DecRenorm(&mut R[1usize],
+                          pptr, &mut ptr_offset);
+        u8Rans64DecRenorm(&mut R[2usize],
+                          pptr, &mut ptr_offset);
+        u8Rans64DecRenorm(&mut R[3usize],
+                          pptr, &mut ptr_offset);
         l0 = c[0usize] as c_int;
         l1 = c[1usize] as c_int;
         l2 = c[2usize] as c_int;
@@ -1622,9 +1714,9 @@ fn safe_rans_uncompress_O1(in_0: &[c_uchar],
               usize].R[Rans64DecGet(&mut rans3,
                                     12i32 as uint32_t) as usize];
         out_buf[i4[3usize] as usize] = c3 as c_char;
-        Rans64DecAdvanceSymbol(&mut rans3,
-                               pptr, &mut ptr_offset,
-                               &mut syms[l3 as usize][c3 as usize], 12i32 as uint32_t);
+        u8Rans64DecAdvanceSymbol(&mut rans3,
+                                 pptr, &mut ptr_offset,
+                                 &mut syms[l3 as usize][c3 as usize], 12i32 as uint32_t);
         l3 = c3 as c_int;
         i4[3usize] += 1
     }
