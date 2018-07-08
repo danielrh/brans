@@ -1364,13 +1364,14 @@ pub unsafe extern "C" fn rans_compress_O1(mut in_0: *mut c_uchar,
         return out_buf
     };
 }
-/*
+
 #[no_mangle]
 pub unsafe extern "C" fn rans_uncompress_O1(mut in_0: *mut c_uchar,
                                             mut in_size: c_uint,
                                             mut out_size: *mut c_uint)
- -> *mut c_uchar {
+                                            -> *mut c_uchar {
     let mut cp: *mut c_uchar = in_0.offset(4isize);
+    let mut ht_in_offset = 4;
     let mut i: c_int = 0;
     let mut j: c_int = -999i32;
     let mut x: c_int = 0;
@@ -1393,23 +1394,27 @@ pub unsafe extern "C" fn rans_uncompress_O1(mut in_0: *mut c_uchar,
         rle_i = 0i32;
         let fresh60 = cp;
         cp = cp.offset(1);
+        ht_in_offset += 1;
         i = *fresh60 as c_int;
         loop  {
             x = 0i32;
             rle_j = x;
             let fresh61 = cp;
             cp = cp.offset(1);
+            ht_in_offset += 1;
             j = *fresh61 as c_int;
             loop  {
                 let mut F: c_int = 0;
                 let mut C: c_int = 0;
                 let fresh62 = cp;
                 cp = cp.offset(1);
+                ht_in_offset += 1;
                 F = *fresh62 as c_int;
                 if F >= 128i32 {
                     F &= !128i32;
                     let fresh63 = cp;
                     cp = cp.offset(1);
+                    ht_in_offset += 1;
                     F = (F & 127i32) << 8i32 | *fresh63 as c_int
                 }
                 C = x;
@@ -1423,9 +1428,11 @@ pub unsafe extern "C" fn rans_uncompress_O1(mut in_0: *mut c_uchar,
                 if 0 == rle_j && j + 1i32 == *cp as c_int {
                     let fresh64 = cp;
                     cp = cp.offset(1);
+                    ht_in_offset += 1;
                     j = *fresh64 as c_int;
                     let fresh65 = cp;
                     cp = cp.offset(1);
+                    ht_in_offset += 1;
                     rle_j = *fresh65 as c_int
                 } else if 0 != rle_j {
                     rle_j -= 1;
@@ -1433,6 +1440,7 @@ pub unsafe extern "C" fn rans_uncompress_O1(mut in_0: *mut c_uchar,
                 } else {
                     let fresh66 = cp;
                     cp = cp.offset(1);
+                    ht_in_offset += 1;
                     j = *fresh66 as c_int
                 }
                 if !(0 != j) { break ; }
@@ -1440,9 +1448,11 @@ pub unsafe extern "C" fn rans_uncompress_O1(mut in_0: *mut c_uchar,
             if 0 == rle_i && i + 1i32 == *cp as c_int {
                 let fresh67 = cp;
                 cp = cp.offset(1);
+                ht_in_offset += 1;
                 i = *fresh67 as c_int;
                 let fresh68 = cp;
                 cp = cp.offset(1);
+                ht_in_offset += 1;
                 rle_i = *fresh68 as c_int
             } else if 0 != rle_i {
                 rle_i -= 1;
@@ -1450,6 +1460,7 @@ pub unsafe extern "C" fn rans_uncompress_O1(mut in_0: *mut c_uchar,
             } else {
                 let fresh69 = cp;
                 cp = cp.offset(1);
+                ht_in_offset += 1;
                 i = *fresh69 as c_int
             }
             if !(0 != i) { break ; }
@@ -1459,14 +1470,17 @@ pub unsafe extern "C" fn rans_uncompress_O1(mut in_0: *mut c_uchar,
         let mut rans2: RansState = 0;
         let mut rans3: RansState = 0;
         let mut ptr: *mut uint8_t = cp;
+        let pptr = core::slice::from_raw_parts_mut(ptr as *mut u32, (in_size as usize - ht_in_offset) >> 2);
+        let mut ptr_offset = 0usize;
         Rans64DecInit(&mut rans0,
-                      &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
+                      pptr, &mut ptr_offset);
+
         Rans64DecInit(&mut rans1,
-                      &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
+                      pptr, &mut ptr_offset);
         Rans64DecInit(&mut rans2,
-                      &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
+                      pptr, &mut ptr_offset);
         Rans64DecInit(&mut rans3,
-                      &mut ptr as *mut *mut uint8_t as *mut *mut uint32_t);
+                      pptr, &mut ptr_offset);
         let mut isz4: c_int = out_sz >> 2i32;
         let mut l0: c_int = 0i32;
         let mut l1: c_int = 0i32;
@@ -1551,17 +1565,13 @@ pub unsafe extern "C" fn rans_uncompress_O1(mut in_0: *mut c_uchar,
                                                      as c_ulong) as
                     RansState as RansState;
             Rans64DecRenorm(&mut R[0usize],
-                            &mut ptr as *mut *mut uint8_t as
-                                *mut *mut uint32_t);
+                            pptr, &mut ptr_offset);
             Rans64DecRenorm(&mut R[1usize],
-                            &mut ptr as *mut *mut uint8_t as
-                                *mut *mut uint32_t);
+                            pptr, &mut ptr_offset);
             Rans64DecRenorm(&mut R[2usize],
-                            &mut ptr as *mut *mut uint8_t as
-                                *mut *mut uint32_t);
+                            pptr, &mut ptr_offset);
             Rans64DecRenorm(&mut R[3usize],
-                            &mut ptr as *mut *mut uint8_t as
-                                *mut *mut uint32_t);
+                            pptr, &mut ptr_offset);
             l0 = c[0usize] as c_int;
             l1 = c[1usize] as c_int;
             l2 = c[2usize] as c_int;
@@ -1582,10 +1592,8 @@ pub unsafe extern "C" fn rans_uncompress_O1(mut in_0: *mut c_uchar,
                                             12i32 as uint32_t) as usize];
             *out_buf.offset(i4[3usize] as isize) = c3 as c_char;
             Rans64DecAdvanceSymbol(&mut rans3,
-                                   &mut ptr as *mut *mut uint8_t as
-                                       *mut *mut uint32_t,
-                                   &mut syms[l3 as usize][c3 as usize] as
-                                       *mut RansDecSymbol, 12i32 as uint32_t);
+                                   pptr, &mut ptr_offset,
+                                   &mut syms[l3 as usize][c3 as usize], 12i32 as uint32_t);
             l3 = c3 as c_int;
             i4[3usize] += 1
         }
@@ -1593,7 +1601,7 @@ pub unsafe extern "C" fn rans_uncompress_O1(mut in_0: *mut c_uchar,
         return out_buf as *mut c_uchar
     };
 }
-*/
+
 #[no_mangle]
 pub unsafe extern "C" fn rans_uncompress_O1b(mut in_0: *mut c_uchar,
                                              mut in_size: c_uint,
@@ -1845,9 +1853,9 @@ pub unsafe extern "C" fn rans_uncompress(mut in_0: *mut c_uchar,
                                          mut in_size: c_uint,
                                          mut out_size: *mut c_uint,
                                          mut order: c_int)
- -> *mut c_uchar {
+                                         -> *mut c_uchar {
     return if 0 != order {
-               rans_uncompress_O1b(in_0, in_size, out_size)
+               rans_uncompress_O1(in_0, in_size, out_size)
            } else { rans_uncompress_O0b(in_0, in_size, out_size) };
 }
 
