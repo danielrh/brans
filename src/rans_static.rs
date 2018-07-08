@@ -1388,218 +1388,242 @@ pub unsafe extern "C" fn rans_uncompress_O1(mut in_0: *mut c_uchar,
             (*in_0.offset(2isize) as c_int) << 16i32 |
             (*in_0.offset(3isize) as c_int) << 24i32;
     out_buf = malloc(out_sz as c_ulong) as *mut c_char;
-    if out_buf.is_null() {
-        return 0 as *mut c_uchar
-    } else {
-        rle_i = 0i32;
-        let fresh60 = cp;
-        cp = cp.offset(1);
+    if !out_buf.is_null() {
+        safe_rans_uncompress_O1(core::slice::from_raw_parts(in_0, in_size as usize),
+                                core::slice::from_raw_parts_mut(out_buf, out_sz as usize));
+    }
+    *out_size = out_sz as c_uint;
+    out_buf
+}
+fn safe_rans_uncompress_O1(in_0: &[c_uchar],
+                           mut out_buf: &mut[c_uchar]) {
+    let mut cp = &in_0[4..];
+    let mut ht_in_offset = 4;
+    let mut i: c_int = 0;
+    let mut j: c_int = -999i32;
+    let mut x: c_int = 0;
+    let mut out_sz: c_int = 0;
+    let mut rle_i: c_int = 0;
+    let mut rle_j: c_int = 0;
+    let mut D: [ari_decoder; 256] = [ari_decoder{R: [0; 4096],}; 256];
+    let mut syms: [[RansDecSymbol; 256]; 256] =
+        [[RansDecSymbol{start: 0, freq: 0,}; 256]; 256];
+    out_sz =
+        (in_0[0] as c_int) << 0i32 |
+        (in_0[1] as c_int) << 8i32 |
+        (in_0[2] as c_int) << 16i32 |
+        (in_0[3] as c_int) << 24i32;
+    assert_eq!(out_sz as usize, out_buf.len());
+    rle_i = 0i32;
+    let fresh60 = cp;
+    cp = &cp[1..];
+    ht_in_offset += 1;
+    i = fresh60[0] as c_int;
+    loop {
+        x = 0i32;
+        rle_j = x;
+        let fresh61 = cp;
+        cp = &cp[1..];
         ht_in_offset += 1;
-        i = *fresh60 as c_int;
-        loop  {
-            x = 0i32;
-            rle_j = x;
-            let fresh61 = cp;
-            cp = cp.offset(1);
+        j = fresh61[0] as c_int;
+        loop {
+            let mut F: c_int = 0;
+            let mut C: c_int = 0;
+            let fresh62 = cp;
+            cp = &cp[1..];
             ht_in_offset += 1;
-            j = *fresh61 as c_int;
-            loop  {
-                let mut F: c_int = 0;
-                let mut C: c_int = 0;
-                let fresh62 = cp;
-                cp = cp.offset(1);
+            F = fresh62[0] as c_int;
+            if F >= 128i32 {
+                F &= !128i32;
+                let fresh63 = cp;
+                cp = &cp[1..];
                 ht_in_offset += 1;
-                F = *fresh62 as c_int;
-                if F >= 128i32 {
-                    F &= !128i32;
-                    let fresh63 = cp;
-                    cp = cp.offset(1);
-                    ht_in_offset += 1;
-                    F = (F & 127i32) << 8i32 | *fresh63 as c_int
-                }
-                C = x;
-                if 0 == F { F = 1i32 << 12i32 }
-                Rans64DecSymbolInit(&mut syms[i as usize][j as usize]
-                                        , C as uint32_t,
-                                    F as uint32_t);
-                memset(&mut D[i as usize].R[x as usize] as *mut c_uchar
-                           as *mut c_void, j, F as c_ulong);
-                x += F;
-                if 0 == rle_j && j + 1i32 == *cp as c_int {
-                    let fresh64 = cp;
-                    cp = cp.offset(1);
-                    ht_in_offset += 1;
-                    j = *fresh64 as c_int;
-                    let fresh65 = cp;
-                    cp = cp.offset(1);
-                    ht_in_offset += 1;
-                    rle_j = *fresh65 as c_int
-                } else if 0 != rle_j {
-                    rle_j -= 1;
-                    j += 1
-                } else {
-                    let fresh66 = cp;
-                    cp = cp.offset(1);
-                    ht_in_offset += 1;
-                    j = *fresh66 as c_int
-                }
-                if !(0 != j) { break ; }
+                F = (F & 127i32) << 8i32 | fresh63[0] as c_int
             }
-            if 0 == rle_i && i + 1i32 == *cp as c_int {
-                let fresh67 = cp;
-                cp = cp.offset(1);
+            C = x;
+            if 0 == F { F = 1i32 << 12i32 }
+            Rans64DecSymbolInit(&mut syms[i as usize][j as usize]
+                                , C as uint32_t,
+                                F as uint32_t);
+            for item in D[i as usize].R.split_at_mut(x as usize).1.split_at_mut(F as usize).0.iter_mut() {
+                *item = j as u8;
+            }
+            //memset(&mut  as *mut c_uchar
+            //       as *mut c_void, j, F as c_ulong);
+            x += F;
+            if 0 == rle_j && j + 1i32 == cp[0] as c_int {
+                let fresh64 = cp;
+                cp = &cp[1..];
                 ht_in_offset += 1;
-                i = *fresh67 as c_int;
-                let fresh68 = cp;
-                cp = cp.offset(1);
+                j = fresh64[0] as c_int;
+                let fresh65 = cp;
+                cp = &cp[1..];
                 ht_in_offset += 1;
-                rle_i = *fresh68 as c_int
-            } else if 0 != rle_i {
-                rle_i -= 1;
-                i += 1
+                rle_j = fresh65[0] as c_int
+            } else if 0 != rle_j {
+                rle_j -= 1;
+                j += 1
             } else {
-                let fresh69 = cp;
-                cp = cp.offset(1);
+                let fresh66 = cp;
+                cp = &cp[1..];
                 ht_in_offset += 1;
-                i = *fresh69 as c_int
+                j = fresh66[0] as c_int
             }
-            if !(0 != i) { break ; }
+            if !(0 != j) { break ; }
         }
-        let mut rans0: RansState = 0;
-        let mut rans1: RansState = 0;
-        let mut rans2: RansState = 0;
-        let mut rans3: RansState = 0;
-        let mut ptr: *mut uint8_t = cp;
-        let pptr = core::slice::from_raw_parts_mut(ptr as *mut u32, (in_size as usize - ht_in_offset) >> 2);
-        let mut ptr_offset = 0usize;
-        Rans64DecInit(&mut rans0,
-                      pptr, &mut ptr_offset);
+        if 0 == rle_i && i + 1i32 == cp[0] as c_int {
+            let fresh67 = cp;
+            cp = &cp[1..];
+            ht_in_offset += 1;
+            i = fresh67[0] as c_int;
+            let fresh68 = cp;
+            cp = &cp[1..];
+            ht_in_offset += 1;
+            rle_i = fresh68[0] as c_int
+        } else if 0 != rle_i {
+            rle_i -= 1;
+            i += 1
+        } else {
+            let fresh69 = cp;
+            cp = &cp[1..];
+            ht_in_offset += 1;
+            i = fresh69[0] as i32;
+        }
+        if !(0 != i) { break ; }
+    }
+    let mut rans0: RansState = 0;
+    let mut rans1: RansState = 0;
+    let mut rans2: RansState = 0;
+    let mut rans3: RansState = 0;
 
-        Rans64DecInit(&mut rans1,
-                      pptr, &mut ptr_offset);
-        Rans64DecInit(&mut rans2,
-                      pptr, &mut ptr_offset);
-        Rans64DecInit(&mut rans3,
-                      pptr, &mut ptr_offset);
-        let mut isz4: c_int = out_sz >> 2i32;
-        let mut l0: c_int = 0i32;
-        let mut l1: c_int = 0i32;
-        let mut l2: c_int = 0i32;
-        let mut l3: c_int = 0i32;
-        let mut i4: [c_int; 4] =
-            [0i32 * isz4, 1i32 * isz4, 2i32 * isz4, 3i32 * isz4];
-        let mut R: [RansState; 4] = [0; 4];
-        R[0usize] = rans0;
-        R[1usize] = rans1;
-        R[2usize] = rans2;
-        R[3usize] = rans3;
-        while i4[0usize] < isz4 {
-            let mut m: [uint32_t; 4] =
-                [(R[0usize] &
-                      (1u32 << 12i32).wrapping_sub(1i32 as c_uint) as
-                          c_ulong) as uint32_t,
-                 (R[1usize] &
-                      (1u32 << 12i32).wrapping_sub(1i32 as c_uint) as
-                          c_ulong) as uint32_t,
-                 (R[2usize] &
-                      (1u32 << 12i32).wrapping_sub(1i32 as c_uint) as
-                          c_ulong) as uint32_t,
-                 (R[3usize] &
-                      (1u32 << 12i32).wrapping_sub(1i32 as c_uint) as
-                          c_ulong) as uint32_t];
-            let mut c: [uint8_t; 4] =
-                [D[l0 as usize].R[m[0usize] as usize],
-                 D[l1 as usize].R[m[1usize] as usize],
-                 D[l2 as usize].R[m[2usize] as usize],
-                 D[l3 as usize].R[m[3usize] as usize]];
-            *out_buf.offset(i4[0usize] as isize) = c[0usize] as c_char;
-            *out_buf.offset(i4[1usize] as isize) = c[1usize] as c_char;
-            *out_buf.offset(i4[2usize] as isize) = c[2usize] as c_char;
-            *out_buf.offset(i4[3usize] as isize) = c[3usize] as c_char;
-            R[0usize] =
-                (syms[l0 as usize][c[0usize] as usize].freq as
-                     c_ulong).wrapping_mul(R[0usize] >> 12i32);
-            R[1usize] =
-                (syms[l1 as usize][c[1usize] as usize].freq as
-                     c_ulong).wrapping_mul(R[1usize] >> 12i32);
-            R[2usize] =
-                (syms[l2 as usize][c[2usize] as usize].freq as
-                     c_ulong).wrapping_mul(R[2usize] >> 12i32);
-            R[3usize] =
-                (syms[l3 as usize][c[3usize] as usize].freq as
-                     c_ulong).wrapping_mul(R[3usize] >> 12i32);
-            R[0usize] =
-                (R[0usize] as
-                     c_ulong).wrapping_add(m[0usize].wrapping_sub(syms[l0
+    let pptr = unsafe{core::slice::from_raw_parts(cp.as_ptr() as *const u32, (in_0.len() - ht_in_offset) >> 2)};
+    let mut ptr_offset = 0usize;
+    Rans64DecInit(&mut rans0,
+                  pptr, &mut ptr_offset);
+    
+    Rans64DecInit(&mut rans1,
+                  pptr, &mut ptr_offset);
+    Rans64DecInit(&mut rans2,
+                  pptr, &mut ptr_offset);
+    Rans64DecInit(&mut rans3,
+                  pptr, &mut ptr_offset);
+    let mut isz4: c_int = out_sz >> 2i32;
+    let mut l0: c_int = 0i32;
+    let mut l1: c_int = 0i32;
+    let mut l2: c_int = 0i32;
+    let mut l3: c_int = 0i32;
+    let mut i4: [c_int; 4] =
+        [0i32 * isz4, 1i32 * isz4, 2i32 * isz4, 3i32 * isz4];
+    let mut R: [RansState; 4] = [0; 4];
+    R[0usize] = rans0;
+    R[1usize] = rans1;
+    R[2usize] = rans2;
+    R[3usize] = rans3;
+    while i4[0usize] < isz4 {
+        let mut m: [uint32_t; 4] =
+            [(R[0usize] &
+              (1u32 << 12i32).wrapping_sub(1i32 as c_uint) as
+              c_ulong) as uint32_t,
+             (R[1usize] &
+              (1u32 << 12i32).wrapping_sub(1i32 as c_uint) as
+              c_ulong) as uint32_t,
+             (R[2usize] &
+              (1u32 << 12i32).wrapping_sub(1i32 as c_uint) as
+              c_ulong) as uint32_t,
+             (R[3usize] &
+              (1u32 << 12i32).wrapping_sub(1i32 as c_uint) as
+              c_ulong) as uint32_t];
+        let mut c: [uint8_t; 4] =
+            [D[l0 as usize].R[m[0usize] as usize],
+             D[l1 as usize].R[m[1usize] as usize],
+             D[l2 as usize].R[m[2usize] as usize],
+             D[l3 as usize].R[m[3usize] as usize]];
+        out_buf[i4[0usize] as usize] = c[0usize] as c_char;
+        out_buf[i4[1usize] as usize] = c[1usize] as c_char;
+        out_buf[i4[2usize] as usize] = c[2usize] as c_char;
+        out_buf[i4[3usize] as usize] = c[3usize] as c_char;
+        R[0usize] =
+            (syms[l0 as usize][c[0usize] as usize].freq as
+             c_ulong).wrapping_mul(R[0usize] >> 12i32);
+        R[1usize] =
+            (syms[l1 as usize][c[1usize] as usize].freq as
+             c_ulong).wrapping_mul(R[1usize] >> 12i32);
+        R[2usize] =
+            (syms[l2 as usize][c[2usize] as usize].freq as
+             c_ulong).wrapping_mul(R[2usize] >> 12i32);
+        R[3usize] =
+            (syms[l3 as usize][c[3usize] as usize].freq as
+             c_ulong).wrapping_mul(R[3usize] >> 12i32);
+        R[0usize] =
+            (R[0usize] as
+             c_ulong).wrapping_add(m[0usize].wrapping_sub(syms[l0
+                                                               as
+                                                               usize][c[0usize]
+                                                                      as
+                                                                      usize].start)
+                                   as c_ulong) as
+            RansState as RansState;
+        R[1usize] =
+            (R[1usize] as
+             c_ulong).wrapping_add(m[1usize].wrapping_sub(syms[l1
+                                                               as
+                                                               usize][c[1usize]
+                                                                      as
+                                                                      usize].start)
+                                   as c_ulong) as
+            RansState as RansState;
+        R[2usize] =
+            (R[2usize] as
+             c_ulong).wrapping_add(m[2usize].wrapping_sub(syms[l2
                                                                                  as
-                                                                                 usize][c[0usize]
-                                                                                            as
+                                                               usize][c[2usize]
+                                                                      as
                                                                                             usize].start)
-                                                     as c_ulong) as
-                    RansState as RansState;
-            R[1usize] =
-                (R[1usize] as
-                     c_ulong).wrapping_add(m[1usize].wrapping_sub(syms[l1
-                                                                                 as
-                                                                                 usize][c[1usize]
-                                                                                            as
-                                                                                            usize].start)
-                                                     as c_ulong) as
-                    RansState as RansState;
-            R[2usize] =
-                (R[2usize] as
-                     c_ulong).wrapping_add(m[2usize].wrapping_sub(syms[l2
-                                                                                 as
-                                                                                 usize][c[2usize]
-                                                                                            as
-                                                                                            usize].start)
-                                                     as c_ulong) as
-                    RansState as RansState;
-            R[3usize] =
-                (R[3usize] as
-                     c_ulong).wrapping_add(m[3usize].wrapping_sub(syms[l3
-                                                                                 as
-                                                                                 usize][c[3usize]
-                                                                                            as
-                                                                                            usize].start)
-                                                     as c_ulong) as
-                    RansState as RansState;
-            Rans64DecRenorm(&mut R[0usize],
-                            pptr, &mut ptr_offset);
-            Rans64DecRenorm(&mut R[1usize],
-                            pptr, &mut ptr_offset);
-            Rans64DecRenorm(&mut R[2usize],
-                            pptr, &mut ptr_offset);
-            Rans64DecRenorm(&mut R[3usize],
-                            pptr, &mut ptr_offset);
-            l0 = c[0usize] as c_int;
-            l1 = c[1usize] as c_int;
-            l2 = c[2usize] as c_int;
-            l3 = c[3usize] as c_int;
-            i4[0usize] += 1;
-            i4[1usize] += 1;
-            i4[2usize] += 1;
-            i4[3usize] += 1
-        }
-        rans0 = R[0usize];
-        rans1 = R[1usize];
-        rans2 = R[2usize];
-        rans3 = R[3usize];
-        while i4[3usize] < out_sz {
-            let mut c3: c_uchar =
-                D[l3 as
-                      usize].R[Rans64DecGet(&mut rans3,
-                                            12i32 as uint32_t) as usize];
-            *out_buf.offset(i4[3usize] as isize) = c3 as c_char;
-            Rans64DecAdvanceSymbol(&mut rans3,
-                                   pptr, &mut ptr_offset,
-                                   &mut syms[l3 as usize][c3 as usize], 12i32 as uint32_t);
-            l3 = c3 as c_int;
-            i4[3usize] += 1
-        }
-        *out_size = out_sz as c_uint;
-        return out_buf as *mut c_uchar
-    };
+                                   as c_ulong) as
+            RansState as RansState;
+        R[3usize] =
+            (R[3usize] as
+             c_ulong).wrapping_add(m[3usize].wrapping_sub(syms[l3
+                                                               as
+                                                               usize][c[3usize]
+                                                                      as
+                                                                      usize].start)
+                                   as c_ulong) as
+            RansState as RansState;
+        Rans64DecRenorm(&mut R[0usize],
+                        pptr, &mut ptr_offset);
+        Rans64DecRenorm(&mut R[1usize],
+                        pptr, &mut ptr_offset);
+        Rans64DecRenorm(&mut R[2usize],
+                        pptr, &mut ptr_offset);
+        Rans64DecRenorm(&mut R[3usize],
+                        pptr, &mut ptr_offset);
+        l0 = c[0usize] as c_int;
+        l1 = c[1usize] as c_int;
+        l2 = c[2usize] as c_int;
+        l3 = c[3usize] as c_int;
+        i4[0usize] += 1;
+        i4[1usize] += 1;
+        i4[2usize] += 1;
+        i4[3usize] += 1
+    }
+    rans0 = R[0usize];
+    rans1 = R[1usize];
+    rans2 = R[2usize];
+    rans3 = R[3usize];
+    while i4[3usize] < out_sz {
+        let mut c3: c_uchar =
+            D[l3 as
+              usize].R[Rans64DecGet(&mut rans3,
+                                    12i32 as uint32_t) as usize];
+        out_buf[i4[3usize] as usize] = c3 as c_char;
+        Rans64DecAdvanceSymbol(&mut rans3,
+                               pptr, &mut ptr_offset,
+                               &mut syms[l3 as usize][c3 as usize], 12i32 as uint32_t);
+        l3 = c3 as c_int;
+        i4[3usize] += 1
+    }
+    //*out_size = out_sz as c_uint;
 }
 
 #[no_mangle]
