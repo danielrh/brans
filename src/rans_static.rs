@@ -2203,6 +2203,167 @@ fn safe_rans_uncompress_O1d(in_0: &[c_uchar],
 
 
 
+fn safe_rans_uncompress_O1h(in_0: &[c_uchar],
+                            mut out_buf: &mut[c_uchar]) {
+    let mut cp = &in_0[4..];
+    let mut ht_in_offset = 4;
+    let mut i: c_int = 0;
+    let mut j: c_int = -999i32;
+    let mut x: c_int = 0;
+    let mut out_sz: c_int = 0;
+    let mut rle_i: c_int = 0;
+    let mut rle_j: c_int = 0;
+    let mut D: [ari_decoder; 256] = [ari_decoder{R: [0; 4096],}; 256];
+    let mut syms: [[RansDecSymbol; 256]; 256] =
+        [[RansDecSymbol{start: 0, freq: 0,}; 256]; 256];
+    out_sz =
+        (in_0[0] as c_int) << 0i32 |
+        (in_0[1] as c_int) << 8i32 |
+        (in_0[2] as c_int) << 16i32 |
+        (in_0[3] as c_int) << 24i32;
+    assert_eq!(out_sz as usize, out_buf.len());
+    rle_i = 0i32;
+    let fresh60 = cp;
+    cp = &cp[1..];
+    ht_in_offset += 1;
+    i = fresh60[0] as c_int;
+    loop {
+        x = 0i32;
+        rle_j = x;
+        let fresh61 = cp;
+        cp = &cp[1..];
+        ht_in_offset += 1;
+        j = fresh61[0] as c_int;
+        loop {
+            let mut F: c_int = 0;
+            let mut C: c_int = 0;
+            let fresh62 = cp;
+            cp = &cp[1..];
+            ht_in_offset += 1;
+            F = fresh62[0] as c_int;
+            if F >= 128i32 {
+                F &= !128i32;
+                let fresh63 = cp;
+                cp = &cp[1..];
+                ht_in_offset += 1;
+                F = (F & 127i32) << 8i32 | fresh63[0] as c_int
+            }
+            C = x;
+            if 0 == F { F = 1i32 << 12i32 }
+            Rans64DecSymbolInit(&mut syms[i as usize][j as usize]
+                                , C as u16,
+                                F as u16);
+            for item in D[i as usize].R.split_at_mut(x as usize).1.split_at_mut(F as usize).0.iter_mut() {
+                *item = j as u8;
+            }
+            //memset(&mut  as *mut c_uchar
+            //       as *mut c_void, j, F as c_ulong);
+            x += F;
+            if 0 == rle_j && j + 1i32 == cp[0] as c_int {
+                let fresh64 = cp;
+                cp = &cp[1..];
+                ht_in_offset += 1;
+                j = fresh64[0] as c_int;
+                let fresh65 = cp;
+                cp = &cp[1..];
+                ht_in_offset += 1;
+                rle_j = fresh65[0] as c_int
+            } else if 0 != rle_j {
+                rle_j -= 1;
+                j += 1
+            } else {
+                let fresh66 = cp;
+                cp = &cp[1..];
+                ht_in_offset += 1;
+                j = fresh66[0] as c_int
+            }
+            if !(0 != j) { break ; }
+        }
+        if 0 == rle_i && i + 1i32 == cp[0] as c_int {
+            let fresh67 = cp;
+            cp = &cp[1..];
+            ht_in_offset += 1;
+            i = fresh67[0] as c_int;
+            let fresh68 = cp;
+            cp = &cp[1..];
+            ht_in_offset += 1;
+            rle_i = fresh68[0] as c_int
+        } else if 0 != rle_i {
+            rle_i -= 1;
+            i += 1
+        } else {
+            let fresh69 = cp;
+            cp = &cp[1..];
+            ht_in_offset += 1;
+            i = fresh69[0] as i32;
+        }
+        if !(0 != i) { break ; }
+    }
+    let mut R0: RansState = 0;
+    let mut R1: RansState = 0;
+    let mut R2: RansState = 0;
+    let mut R3: RansState = 0;
+    
+
+    let pptr = cp;
+    let mut ptr_offset = 0u32;
+    u8Rans64DecInit(&mut R0,
+                  pptr, &mut ptr_offset);
+    
+    u8Rans64DecInit(&mut R1,
+                  pptr, &mut ptr_offset);
+    u8Rans64DecInit(&mut R2,
+                  pptr, &mut ptr_offset);
+    u8Rans64DecInit(&mut R3,
+                  pptr, &mut ptr_offset);
+    ////eprintln!("{:x}\n{:x}\n{:x}\n{:x}", R[0], R[1], R[2], R[3]);
+    let mut isz4: c_int = out_sz >> 2i32;
+    let mut l0: c_int = 0i32;
+    const prob_mask:u16 = (1u16 << 12) - 1;
+    for (index, out0) in out_buf.split_at_mut(isz4 as usize * 4).0.iter_mut().enumerate() {
+        //eprintln!("State {:x}[{}]", R0, index & THREE);
+        let mut m = R0 as u16& prob_mask;
+        let mut c = D[l0 as usize].R[m as usize];
+        *out0 = c;
+        let start_freq = syms[l0 as usize][c as usize];
+        R0 =
+            (start_freq.freq as
+             c_ulong).wrapping_mul(R0 >> 12);
+        R0 =
+            (R0 as
+             c_ulong).wrapping_add(m.wrapping_sub(start_freq.start) as u64);
+        let lt_1_sl_31 = (R0 & 0xffff_ffff_8000_0000);
+        
+        if lt_1_sl_31 == 0 {
+            u8Rans64DecForceRenorm(&mut R0,
+                              pptr, &mut ptr_offset);
+        }
+        let tmp = R0;
+        R0 = R1;
+        R1 = tmp;
+        //eprintln!("GET {:x} {:x} {:?}", l0, c, syms[l0 as usize][c as usize]);
+        //eprintln!("Atate {:x}[{}]", R1, index & THREE);
+        l0 = c as c_int;
+    }
+    let mut i4 = isz4 * 4;
+    while i4 < out_sz {
+        //eprintln!("State {:x}", R1);
+        let mut c3: c_uchar =
+            D[l0 as
+              usize].R[Rans64DecGet(&mut R1,
+                                    12 as uint32_t) as usize];
+        out_buf[i4 as usize] = c3 as c_char;
+        u8Rans64DecAdvanceSymbol(&mut R1,
+                                 pptr, &mut ptr_offset,
+                                 &mut syms[l0 as usize][c3 as usize], 12i32 as uint32_t);
+        //eprintln!("GET {:x} {:x}", l0, c3);
+        //eprintln!("Atate {:x}", R1);
+        l0 = c3 as c_int;
+        i4 += 1
+    }
+    //*out_size = out_sz as c_uint;
+}
+
 
 fn safe_rans_uncompress_O1g(in_0: &[c_uchar],
                             mut out_buf: &mut[c_uchar]) {
