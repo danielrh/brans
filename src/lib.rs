@@ -1,3 +1,4 @@
+#![feature(core_intrinsics)]
 #![allow ( dead_code )]
 #![allow ( mutable_transmutes )]
 #![allow ( non_camel_case_types )]

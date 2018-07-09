@@ -1,3 +1,4 @@
+#![feature(core_intrinsics)]
 type c_void = u8;
 type c_char = u8;
 type c_uchar = u8;
@@ -219,6 +220,19 @@ fn u8Rans64DecRenorm(mut r: &mut Rans64State,
         //eprintln!("D{:x}", x &0xffff_ffff);
         *ptr_offset = ptr_offset.wrapping_add(4);
     }
+    *r = x;
+}
+#[no_mangle]
+fn u8Rans64DecForceRenorm(mut r: &mut Rans64State,
+                   pptr: &[u8], ptr_offset: &mut u32) {
+    let mut x: uint64_t = *r;
+    x = x << 32i32 | (
+        (pptr[*ptr_offset as usize + 3] as u64) << 24) | (
+        (pptr[*ptr_offset as usize + 2] as u64) << 16) | (
+        (pptr[*ptr_offset as usize + 1] as u64) << 8) | (
+        pptr[*ptr_offset as usize] as u64);
+    //eprintln!("D{:x}", x &0xffff_ffff);
+    *ptr_offset = ptr_offset.wrapping_add(4);
     *r = x;
 }
 ///////////////u8///////////
@@ -2148,21 +2162,30 @@ fn safe_rans_uncompress_O1d(in_0: &[c_uchar],
     let mut i4: [c_int; 1] =
         [0i32];
     const prob_mask:u16 = (1u16 << 12) - 1;
+    let mut m = R[0] as u16 & prob_mask;
+    let mut next_fetch = &D[l0 as usize].R[m as usize];
+    
     for (index, out0) in out_buf.split_at_mut(isz4 as usize * 4).0.iter_mut().enumerate() {
         //eprintln!("State {:x}[{}]", R[index & THREE], index & THREE);
-        let mut m = R[index & THREE] as u16& prob_mask;
-        let mut c = D[l0 as usize].R[m as usize];
+        let mut c = *next_fetch;
         *out0 = c;
+        let start_freq = syms[l0 as usize][c as usize];
+        let mnew = R[(index + 1)& THREE] as u16 & prob_mask;
         R[index & THREE] =
-            (syms[l0 as usize][c as usize].freq as
+            (start_freq.freq as
              c_ulong).wrapping_mul(R[index & THREE] >> 12);
         R[index & THREE] =
             (R[index & THREE] as
-             c_ulong).wrapping_add(m.wrapping_sub(syms[l0 as usize][c as usize].start)
-                                   as c_ulong) as
-            RansState as RansState;
-        u8Rans64DecRenorm(&mut R[index & THREE],
-                          pptr, &mut ptr_offset);
+             c_ulong).wrapping_add(m.wrapping_sub(start_freq.start) as u64);
+        let lt_1_sl_31 = (R[index & THREE] & 0xffff_ffff_8000_0000);
+        //unsafe{core::intrinsics::prefetch_read_instruction(next_fetch_ptr, 3)};
+        next_fetch = &D[c as usize].R[mnew as usize];
+        let  next_fetch_ptr = next_fetch as *const u8;
+        m = mnew;
+        if lt_1_sl_31 == 0 {
+            u8Rans64DecForceRenorm(&mut R[index & THREE],
+                              pptr, &mut ptr_offset);
+        }
         //eprintln!("GET {:x} {:x} {:?}", l0, c, syms[l0 as usize][c as usize]);
         //eprintln!("Atate {:x}[{}]", R[index & THREE], index & THREE);
         l0 = c as c_int;

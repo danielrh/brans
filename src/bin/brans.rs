@@ -331,7 +331,7 @@ pub unsafe extern "C" fn main_0() -> c_int {
         let mut bu: *mut blocks = 0 as *mut blocks;
         let mut nb: c_int = 0i32;
         let mut i: c_int = 0;
-        len = 10000001i32 as size_t;
+        len = 100000001i32 as size_t;
         let ref mut fresh80 = (*b.offset(nb as isize)).blk;
         *fresh80 = malloc(len) as *mut c_uchar;
         (*b.offset(nb as isize)).sz = len as uint32_t;
