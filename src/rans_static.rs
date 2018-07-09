@@ -1,4 +1,3 @@
-#![feature(core_intrinsics)]
 type c_void = u8;
 type c_char = u8;
 type c_uchar = u8;
@@ -2162,15 +2161,12 @@ fn safe_rans_uncompress_O1d(in_0: &[c_uchar],
     let mut i4: [c_int; 1] =
         [0i32];
     const prob_mask:u16 = (1u16 << 12) - 1;
-    let mut m = R[0] as u16 & prob_mask;
-    let mut next_fetch = &D[l0 as usize].R[m as usize];
-    let mut next_c = *next_fetch;
     for (index, out0) in out_buf.split_at_mut(isz4 as usize * 4).0.iter_mut().enumerate() {
         //eprintln!("State {:x}[{}]", R[index & THREE], index & THREE);
-        let mut c = next_c;
+        let mut m = R[index & THREE] as u16& prob_mask;
+        let mut c = D[l0 as usize].R[m as usize];
         *out0 = c;
         let start_freq = syms[l0 as usize][c as usize];
-        let mnew = R[(index + 1)& THREE] as u16 & prob_mask;
         R[index & THREE] =
             (start_freq.freq as
              c_ulong).wrapping_mul(R[index & THREE] >> 12);
@@ -2178,9 +2174,6 @@ fn safe_rans_uncompress_O1d(in_0: &[c_uchar],
             (R[index & THREE] as
              c_ulong).wrapping_add(m.wrapping_sub(start_freq.start) as u64);
         let lt_1_sl_31 = (R[index & THREE] & 0xffff_ffff_8000_0000);
-        next_fetch = &D[c as usize].R[mnew as usize];
-        next_c = *next_fetch;
-        m = mnew;
         if lt_1_sl_31 == 0 {
             u8Rans64DecForceRenorm(&mut R[index & THREE],
                               pptr, &mut ptr_offset);
