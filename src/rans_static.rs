@@ -1483,7 +1483,7 @@ pub unsafe extern "C" fn rans_compress_O1(mut in_0: *mut c_uchar,
         return out_buf
     };
 }
-const THREE:usize = 3;
+const THREE:usize = 1;
 
 #[no_mangle]
 pub unsafe extern "C" fn rans_compress_O1d(mut in_0: *mut c_uchar,
@@ -1672,7 +1672,7 @@ pub unsafe extern "C" fn rans_compress_O1d(mut in_0: *mut c_uchar,
         while i3 > 4i32 * isz4 - 2i32 {
             let mut c3: c_uchar = *in_0.offset(i3 as isize);
             //eprintln!("State {:x}",rans[3&THREE]);
-            Rans64EncPutSymbol(&mut rans[3& THREE],
+            Rans64EncPutSymbol(&mut rans[(i3+1) as usize & THREE],
                                pptr, &mut ptr_offset,
                                &mut syms[c3 as usize][l3 as usize]
                                   , 12i32 as uint32_t);
@@ -2158,47 +2158,29 @@ fn safe_rans_uncompress_O1d(in_0: &[c_uchar],
     ////eprintln!("{:x}\n{:x}\n{:x}\n{:x}", R[0], R[1], R[2], R[3]);
     let mut isz4: c_int = out_sz >> 2i32;
     let mut l0: c_int = 0i32;
-    let mut i4: [c_int; 1] =
-        [0i32];
     const prob_mask:u16 = (1u16 << 12) - 1;
-    for (index, out0) in out_buf.split_at_mut(isz4 as usize * 4).0.iter_mut().enumerate() {
+    for (mut index, out0) in out_buf.iter_mut().enumerate() {
+        index &= THREE;
         //eprintln!("State {:x}[{}]", R[index & THREE], index & THREE);
-        let mut m = R[index & THREE] as u16& prob_mask;
+        let mut m = R[index] as u16& prob_mask;
         let mut c = D[l0 as usize].R[m as usize];
         *out0 = c;
         let start_freq = syms[l0 as usize][c as usize];
-        R[index & THREE] =
+        R[index] =
             (start_freq.freq as
-             c_ulong).wrapping_mul(R[index & THREE] >> 12);
-        R[index & THREE] =
-            (R[index & THREE] as
+             c_ulong).wrapping_mul(R[index] >> 12);
+        R[index] =
+            (R[index] as
              c_ulong).wrapping_add(m.wrapping_sub(start_freq.start) as u64);
-        let lt_1_sl_31 = (R[index & THREE] & 0xffff_ffff_8000_0000);
+        let lt_1_sl_31 = (R[index] & 0xffff_ffff_8000_0000);
         if lt_1_sl_31 == 0 {
-            u8Rans64DecForceRenorm(&mut R[index & THREE],
+            u8Rans64DecForceRenorm(&mut R[index],
                               pptr, &mut ptr_offset);
         }
         //eprintln!("GET {:x} {:x} {:?}", l0, c, syms[l0 as usize][c as usize]);
         //eprintln!("Atate {:x}[{}]", R[index & THREE], index & THREE);
         l0 = c as c_int;
-        i4[0usize] += 1;
     }
-    while i4[0usize] < out_sz {
-        //eprintln!("State {:x}", R[3 & THREE]);
-        let mut c3: c_uchar =
-            D[l0 as
-              usize].R[Rans64DecGet(&mut R[3 & THREE],
-                                    12 as uint32_t) as usize];
-        out_buf[i4[0usize] as usize] = c3 as c_char;
-        u8Rans64DecAdvanceSymbol(&mut R[THREE],
-                                 pptr, &mut ptr_offset,
-                                 &mut syms[l0 as usize][c3 as usize], 12i32 as uint32_t);
-        //eprintln!("GET {:x} {:x}", l0, c3);
-        //eprintln!("Atate {:x}", R[THREE]);
-        l0 = c3 as c_int;
-        i4[0usize] += 1
-    }
-    //*out_size = out_sz as c_uint;
 }
 
 
@@ -2320,7 +2302,7 @@ fn safe_rans_uncompress_O1h(in_0: &[c_uchar],
     let mut isz4: c_int = out_sz >> 2i32;
     let mut l0: c_int = 0i32;
     const prob_mask:u16 = (1u16 << 12) - 1;
-    for (index, out0) in out_buf.split_at_mut(isz4 as usize * 4).0.iter_mut().enumerate() {
+    for (index, out0) in out_buf.iter_mut().enumerate() {
         //eprintln!("State {:x}[{}]", R0, index & THREE);
         let mut m = R0 as u16& prob_mask;
         let mut c = D[l0 as usize].R[m as usize];
@@ -2344,22 +2326,6 @@ fn safe_rans_uncompress_O1h(in_0: &[c_uchar],
         //eprintln!("GET {:x} {:x} {:?}", l0, c, syms[l0 as usize][c as usize]);
         //eprintln!("Atate {:x}[{}]", R1, index & THREE);
         l0 = c as c_int;
-    }
-    let mut i4 = isz4 * 4;
-    while i4 < out_sz {
-        //eprintln!("State {:x}", R1);
-        let mut c3: c_uchar =
-            D[l0 as
-              usize].R[Rans64DecGet(&mut R1,
-                                    12 as uint32_t) as usize];
-        out_buf[i4 as usize] = c3 as c_char;
-        u8Rans64DecAdvanceSymbol(&mut R1,
-                                 pptr, &mut ptr_offset,
-                                 &mut syms[l0 as usize][c3 as usize], 12i32 as uint32_t);
-        //eprintln!("GET {:x} {:x}", l0, c3);
-        //eprintln!("Atate {:x}", R1);
-        l0 = c3 as c_int;
-        i4 += 1
     }
     //*out_size = out_sz as c_uint;
 }
@@ -2515,10 +2481,10 @@ fn safe_rans_uncompress_O1g(in_0: &[c_uchar],
         //eprintln!("State {:x}", R[3 & THREE]);
         let mut c3: c_uchar =
             D[l0 as
-              usize].R[Rans64DecGet(&mut R[3 & THREE],
+              usize].R[Rans64DecGet(&mut R[i4[0] as usize& THREE],
                                     12 as uint32_t) as usize];
         out_buf[i4[0usize] as usize] = c3 as c_char;
-        u8Rans64DecAdvanceSymbol(&mut R[THREE],
+        u8Rans64DecAdvanceSymbol(&mut R[i4[0] as usize&THREE],
                                  pptr, &mut ptr_offset,
                                  &mut syms[l0 as usize][c3 as usize], 12i32 as uint32_t);
         //eprintln!("GET {:x} {:x}", l0, c3);
@@ -2711,10 +2677,10 @@ fn safe_rans_uncompress_O1e(in_0: &[c_uchar],
         //eprintln!("State {:x}", R[3 & THREE]);
         let mut c3: c_uchar =
             D[l0 as
-              usize].R[Rans64DecGet(&mut R[3 & THREE],
+              usize].R[Rans64DecGet(&mut R[i4 as usize & THREE],
                                     12 as uint32_t) as usize];
         out_buf[i4 as usize] = c3 as c_char;
-        u8Rans64DecAdvanceSymbol(&mut R[THREE],
+        u8Rans64DecAdvanceSymbol(&mut R[i4 as usize &THREE],
                                  pptr, &mut ptr_offset,
                                  &mut syms[l0 as usize][c3 as usize], 12i32 as uint32_t);
         //eprintln!("GET {:x} {:x}", l0, c3);
@@ -2886,10 +2852,10 @@ fn safe_rans_uncompress_O1f(in_0: &[c_uchar],
         //eprintln!("State {:x}", R[3 & THREE]);
         let mut c3: c_uchar =
             D[l0 as
-              usize].R[Rans64DecGet(&mut R[3 & THREE],
+              usize].R[Rans64DecGet(&mut R[i4 as usize & THREE],
                                     12 as uint32_t) as usize];
         out_buf[i4 as usize] = c3 as c_char;
-        u8Rans64DecAdvanceSymbol(&mut R[THREE],
+        u8Rans64DecAdvanceSymbol(&mut R[i4 as usize & THREE],
                                  pptr, &mut ptr_offset,
                                  &mut syms[l0 as usize][c3 as usize], 12i32 as uint32_t);
         //eprintln!("GET {:x} {:x}", l0, c3);
